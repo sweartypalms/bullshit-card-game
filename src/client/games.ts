@@ -1,4 +1,3 @@
-import { getPlayersInGame, getUserCards } from "../server/db/games";
 import { socket } from "./socket";
 
 // Get the roomId from the template or URL
@@ -12,7 +11,7 @@ socket.emit("joinRoom", roomId);
 socket.on("game:update", (data) => {
   // Update the UI with the new game state
   updateGameInfo(data.gameInfo);
-  getPlayersInGame(data.players);
+  updatePlayersList(data.players);
 });
 
 socket.on("game:winner", ({ winner }) => {
@@ -59,4 +58,20 @@ function updateGameInfo(gameInfo: any) {
   const maxPlayers = document.getElementById("max-players");
   if (minPlayers) minPlayers.textContent = gameInfo.min_players;
   if (maxPlayers) maxPlayers.textContent = gameInfo.max_players;
+}
+
+// Add this function to update the players list in the UI
+// This replaces the server-side getPlayersInGame function
+function updatePlayersList(players: any[]) {
+  // Update your players list in the DOM
+  // Example implementation:
+  const playersContainer = document.getElementById("players-list");
+  if (playersContainer && players) {
+    playersContainer.innerHTML = players
+      .map(
+        (player) =>
+          `<div class="player">${player.username || player.name}</div>`,
+      )
+      .join("");
+  }
 }
