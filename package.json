@@ -7,7 +7,8 @@
   },
   "main": "index.js",
   "scripts": {
-    "start": "NODE_ENV=production ts-node src/server/index.ts",
+    "build": "tsc",
+    "start": "node dist/server/index.js",
     "start:dev": "concurrently --names backend,frontend -c blue,green \"npm run server:dev\" \"npm run frontend:dev\"",
     "server:dev": "nodemon --exec ts-node src/server/index.ts --ext ts,ejs,css",
     "frontendbuild": "webpack --config webpack.config.ts",
