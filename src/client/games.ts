@@ -26,7 +26,7 @@ socket.on("game:winner", ({ winner }) => {
   }
   document
     .querySelectorAll("#play-cards-btn, #bs-btn")
-    .forEach((btn) => (btn.disabled = true));
+    .forEach((btn) => ((btn as HTMLButtonElement).disabled = true));
 });
 
 socket.on("game:supposedRank", function (data) {
