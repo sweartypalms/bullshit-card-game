@@ -186,6 +186,7 @@ function updateTurnActions() {
   const playButton = document.getElementById("play-cards-btn") as HTMLButtonElement | null;
   const bsButton = document.getElementById("bs-btn") as HTMLButtonElement | null;
   const turnNotice = document.getElementById("turn-notice");
+  const turnBanner = document.getElementById("turn-banner");
   const selectedCards = document.querySelectorAll(".card-checkbox:checked").length;
   const isCurrentPlayer = currentPlayerName === currentUsername;
 
@@ -203,6 +204,14 @@ function updateTurnActions() {
     turnNotice.textContent = isCurrentPlayer
       ? "It's your turn. Select up to 4 cards to play."
       : `It's ${currentPlayerName ?? "another player's"} turn.`;
+  }
+
+  if (turnBanner) {
+    turnBanner.textContent = isCurrentPlayer
+      ? "It's your turn"
+      : `Waiting for ${currentPlayerName ?? "another player"}`;
+    turnBanner.classList.toggle("your-turn", isCurrentPlayer);
+    turnBanner.classList.toggle("waiting-turn", !isCurrentPlayer);
   }
 }
 

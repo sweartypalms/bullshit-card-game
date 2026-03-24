@@ -32,6 +32,13 @@
         <h2 style="color:#2c3e50;">
           Current Turn: <span id="current-player-name"><%= currentPlayer %></span>
         </h2>
+        <div id="turn-banner" class="<%= username === currentPlayer ? 'turn-banner your-turn' : 'turn-banner waiting-turn' %>">
+          <% if (username === currentPlayer) { %>
+            It's your turn
+          <% } else { %>
+            Waiting for <%= currentPlayer %>
+          <% } %>
+        </div>
         <% if (isHost) { %>
           <button id="start-btn" class="start-btn" style="background-color: <%= players.length >= min_players ? '#2ecc71' : '#e74c3c' %>; color: white;" <% if (players.length < min_players) { %>
             disabled
