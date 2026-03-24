@@ -76,7 +76,10 @@ Welcome to **Bullsh\*t**, a fast-paced, deception-driven card game built as a te
 
 ## 🧰 Technologies Used
 
-- **Frontend:** Coming soon (currently wireframes only)
+- **Frontend:** 
+  - HTML
+  - Tailwind
+  - 
 - **Backend:**
   - Node.js
   - Express
@@ -106,43 +109,17 @@ Welcome to **Bullsh\*t**, a fast-paced, deception-driven card game built as a te
 
 ## 🚧 Project Status
 
-**Almost Completed**
-
+**Completed**
 The game is fully functional with the following features:
 
 - Player registration and authentication
 - Lobby system for creating and joining games
 - Game flow including turns, bluffing, and completion
 
-**Remaining Task: Real-Time Game State Tracking**
-
+**Todo:**
 
 ---
 
 ## 📜 License
 
 This project is developed as part of the coursework for **CSC 667/867** at **San Francisco State University**. All rights reserved by Team Gator Tots, 2025.
-
-
-## 🗄️ Database Setup & Migration
-
-To run the project locally, you'll need to set up the PostgreSQL database named `GatorTotsDb`. Follow the steps below to create and migrate the database:
-
-### ⚙️ Prerequisites
-- PostgreSQL installed and running
-- Node.js environment set up
-- Project dependencies installed (`npm install`)
-
----
-
-
-### 🧭 Steps to Create & Migrate the Database
-
-1. **Log into PostgreSQL as the `postgres` user**:
-   ```bash
-   psql -U postgres
-2. (Optional) Drop the existing database (if it already exists):
-     ```DROP DATABASE IF EXISTS "GatorTotsDb";```
-3. Create the database:  ```CREATE DATABASE "GatorTotsDb";```
-4. Run the migration script from project directory:
-   ```npm run db:migrate```
