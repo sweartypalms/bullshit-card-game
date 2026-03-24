@@ -4,6 +4,14 @@ type Card = {
   card_rank: number;
 };
 
+type ChatMessage = {
+  message?: string;
+  sender?: { username?: string };
+  timestamp?: string | Date;
+  username?: string;
+  message_content?: string;
+};
+
 const roomId =
   (window as any).gameId || window.location.pathname.split("/").pop();
 const currentUsername = document.body.dataset.username ?? "";
@@ -27,6 +35,37 @@ function showGameOverlay(message: string) {
   document
     .querySelectorAll("#play-cards-btn, #bs-btn, #start-btn")
     .forEach((btn) => ((btn as HTMLButtonElement).disabled = true));
+}
+
+function appendChatMessage(text: string) {
+  const chatMessages = document.getElementById("chat-messages");
+  if (!chatMessages) {
+    return;
+  }
+
+  const li = document.createElement("li");
+  li.className = "chat-message-item";
+  li.textContent = text;
+  chatMessages.appendChild(li);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+async function loadChatHistory() {
+  try {
+    const response = await fetch(`/chat/${roomId}/messages`);
+    if (!response.ok) {
+      return;
+    }
+
+    const messages: ChatMessage[] = await response.json();
+    messages.forEach((msg) => {
+      appendChatMessage(
+        `[${new Date(msg.timestamp ?? "").toLocaleTimeString()}] ${msg.username}: ${msg.message_content}`,
+      );
+    });
+  } catch (_error) {
+    // Keep the game playable even if chat history fails to load.
+  }
 }
 
 socket.on("game:update", (data) => {
@@ -75,6 +114,12 @@ socket.on("game:currentCard", function (data) {
   }
 });
 
+socket.on(`chat:message:${roomId}`, (data: ChatMessage) => {
+  appendChatMessage(
+    `[${new Date(data.timestamp ?? "").toLocaleTimeString()}] ${data.sender?.username ?? "Unknown"}: ${data.message ?? ""}`,
+  );
+});
+
 function updateGameInfo(
   gameInfo: any,
   players: any[],
@@ -99,12 +144,21 @@ function updateGameInfo(
 
   const startButton = document.getElementById("start-btn") as HTMLButtonElement | null;
   if (startButton) {
-    const canStart = players.length >= Number(gameInfo.min_players);
+    const gameStarted = Boolean(gameInfo.game_started);
+    const canStart = players.length >= Number(gameInfo.min_players) && !gameStarted;
     startButton.disabled = !canStart;
-    startButton.style.backgroundColor = canStart ? "#2ecc71" : "#e74c3c";
-    startButton.title = canStart
-      ? "Enough players have joined. You can start the game."
-      : `Need at least ${gameInfo.min_players} players to start`;
+    startButton.textContent = gameStarted ? "Game Started" : "Start Game";
+    startButton.classList.toggle("game-started", gameStarted);
+    startButton.style.backgroundColor = gameStarted
+      ? "#a0a7b4"
+      : canStart
+        ? "#2ecc71"
+        : "#e74c3c";
+    startButton.title = gameStarted
+      ? "The game has already started"
+      : canStart
+        ? "Enough players have joined. You can start the game."
+        : `Need at least ${gameInfo.min_players} players to start`;
   }
 }
 
@@ -236,6 +290,28 @@ function bindCardSelection() {
   });
 }
 
+const chatForm = document.getElementById("chat-form") as HTMLFormElement | null;
+const chatInput = document.getElementById("chat-input") as HTMLInputElement | null;
+if (chatForm && chatInput) {
+  chatForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const message = chatInput.value.trim();
+    if (!message) {
+      return;
+    }
+
+    fetch(`/chat/${roomId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message }),
+    }).then((response) => {
+      if (response.ok) {
+        chatInput.value = "";
+      }
+    });
+  });
+}
+
 const exitGameButton = document.getElementById("exit-game-btn");
 if (exitGameButton) {
   exitGameButton.addEventListener("click", () => {
@@ -243,5 +319,6 @@ if (exitGameButton) {
   });
 }
 
+loadChatHistory();
 bindCardSelection();
 updateTurnActions();

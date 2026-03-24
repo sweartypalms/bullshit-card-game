@@ -244,6 +244,7 @@ router.get("/:gameId", async (request: Request, response: Response) => {
     userCards,
     currentPlayer: currentPlayer?.username,
     currentRank: gameInfo.current_supposed_rank,
+    gameStarted: gameInfo.game_started,
     lastPlayedUser: state.lastPlayedUser,
     hostUsername: state.hostUsername,
   });

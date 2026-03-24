@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <title>Gator Tot's BS Game Lobby</title>
   <%- include('shared/head') %>
-  <script src="/socket.io/socket.io.js"></script>
 </head>
 
 <body data-username="<%= username %>">
@@ -40,8 +39,8 @@
 
         <div class="game-action-row">
           <% if (isHost) { %>
-            <button id="start-btn" class="start-btn" style="background-color: <%= players.length >= min_players ? '#2ecc71' : '#e74c3c' %>; color: white;" <% if (players.length < min_players) { %>disabled title="Need at least <%= min_players %> players to start"<% } else { %>title="Enough players have joined. You can start the game."<% } %>>
-              Start Game
+            <button id="start-btn" class="start-btn <%= gameStarted ? 'game-started' : '' %>" style="background-color: <%= gameStarted ? '#a0a7b4' : (players.length >= min_players ? '#2ecc71' : '#e74c3c') %>; color: white;" <% if (gameStarted) { %>disabled title="The game has already started"<% } else if (players.length < min_players) { %>disabled title="Need at least <%= min_players %> players to start"<% } else { %>title="Enough players have joined. You can start the game."<% } %>>
+              <%= gameStarted ? 'Game Started' : 'Start Game' %>
             </button>
           <% } %>
           <button id="bs-btn" style="background-color: <%= (username !== lastPlayedUser) ? '#e74c3c' : '#ccc' %>; color: white;" <% if (username===lastPlayedUser) { %>disabled<% } %>>
@@ -60,21 +59,34 @@
             const rankDiff = rankOrder(a.card_rank) - rankOrder(b.card_rank);
             return rankDiff !== 0 ? rankDiff : suitOrder(a.card_rank) - suitOrder(b.card_rank);
             });
-            function cardName(cardNum) {
+            function cardRankLabel(cardNum) {
             const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
-            const suits = ["s", "c", "d", "h"];
-            const zeroBased = cardNum - 1;
-            const rank = ranks[Math.floor(zeroBased / 4)];
-            const suit = suits[zeroBased % 4];
-            return rank + suit;
+            return ranks[Math.floor((cardNum - 1) / 4)];
+            }
+            function cardSuitSymbol(cardNum) {
+            const suits = ["&spades;", "&clubs;", "&diams;", "&hearts;"];
+            return suits[(cardNum - 1) % 4];
+            }
+            function cardColorClass(cardNum) {
+            return ((cardNum - 1) % 4) >= 2 ? "card-red" : "card-black";
             }
           %>
           <ul id="my-cards">
             <% sortedCards.forEach(function(card) { %>
               <li>
-                <label>
+                <label class="card-option">
                   <input type="checkbox" name="selectedCards" value="<%= card.card_rank %>" class="card-checkbox" />
-                  <%= cardName(card.card_rank) %> (<%= card.card_rank %>)
+                  <span class="card-face <%= cardColorClass(card.card_rank) %>">
+                    <span class="card-corner top">
+                      <span class="card-rank"><%= cardRankLabel(card.card_rank) %></span>
+                      <span class="card-suit-small"><%- cardSuitSymbol(card.card_rank) %></span>
+                    </span>
+                    <span class="card-center"><%- cardSuitSymbol(card.card_rank) %></span>
+                    <span class="card-corner bottom">
+                      <span class="card-rank"><%= cardRankLabel(card.card_rank) %></span>
+                      <span class="card-suit-small"><%- cardSuitSymbol(card.card_rank) %></span>
+                    </span>
+                  </span>
                 </label>
               </li>
             <% }); %>
@@ -116,47 +128,6 @@
   </div>
 
   <script>
-    const roomId = "<%= gameId %>";
-    const socket = io();
-    const chatMessages = document.getElementById("chat-messages");
-
-    function appendChatMessage(text) {
-      const li = document.createElement("li");
-      li.className = "chat-message-item";
-      li.textContent = text;
-      chatMessages.appendChild(li);
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    socket.emit("joinRoom", roomId);
-
-    socket.on(`chat:message:${roomId}`, function (data) {
-      appendChatMessage(`[${new Date(data.timestamp).toLocaleTimeString()}] ${data.sender.username}: ${data.message}`);
-    });
-
-    document.getElementById("chat-form").addEventListener("submit", function (e) {
-      e.preventDefault();
-      const input = document.getElementById("chat-input");
-      if (!input.value.trim()) {
-        return;
-      }
-
-      fetch(`/chat/${roomId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: input.value }),
-      });
-      input.value = "";
-    });
-
-    fetch(`/chat/${roomId}/messages`)
-      .then(res => res.json())
-      .then(messages => {
-        messages.forEach(msg => {
-          appendChatMessage(`[${new Date(msg.timestamp).toLocaleTimeString()}] ${msg.username}: ${msg.message_content}`);
-        });
-      });
-
     document.getElementById('play-cards-btn').addEventListener('click', () => {
       const selected = Array.from(document.querySelectorAll('.card-checkbox:checked'))
         .map(cb => Number(cb.value));
@@ -164,7 +135,7 @@
       fetch(`/games/<%= gameId %>/play`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cards: selected, pileId: roomId }),
+        body: JSON.stringify({ cards: selected, pileId: "<%= gameId %>" }),
       }).then(res => {
         if (res.ok) {
           document.querySelectorAll('.card-checkbox').forEach(cb => cb.checked = false);

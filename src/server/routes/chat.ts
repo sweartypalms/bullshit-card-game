@@ -32,7 +32,7 @@ router.post("/:roomId", async (request: Request, response: Response) => {
     );
     await Game.touchUser(user_id);
 
-    io.emit(`chat:message:${roomId}`, {
+    io.to(roomId).emit(`chat:message:${roomId}`, {
       message,
       sender: { username },
       timestamp: new Date(),
