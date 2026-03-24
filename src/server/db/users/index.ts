@@ -15,6 +15,24 @@ export type UserProfileStats = {
   abandoned_games: number;
 };
 
+let profileStatsColumnsSupported: boolean | null = null;
+
+const hasProfileStatsColumns = async () => {
+  if (profileStatsColumnsSupported !== null) {
+    return profileStatsColumnsSupported;
+  }
+
+  const result = await db.one<{ count: number }>(
+    `SELECT COUNT(*)::int AS count
+     FROM information_schema.columns
+     WHERE table_name = 'users'
+       AND column_name IN ('wins', 'losses', 'abandoned_games')`,
+  );
+
+  profileStatsColumnsSupported = result.count === 3;
+  return profileStatsColumnsSupported;
+};
+
 const register = async (username: string, password: string) => {
   const encryptedPassword = await bcrypt.hash(password, 10);
 
@@ -41,9 +59,9 @@ const login = async (username: string, password: string) => {
 
   if (passwordsMatch) {
     return user.user_id;
-  } else {
-    throw new Error("Failed to login");
   }
+
+  throw new Error("Failed to login");
 };
 
 const createGuest = async () => {
@@ -68,8 +86,20 @@ const createGuest = async () => {
 };
 
 const getProfileStats = async (userId: number) => {
+  if (await hasProfileStatsColumns()) {
+    return db.oneOrNone<UserProfileStats>(
+      `SELECT user_id, username, wins, losses, abandoned_games
+       FROM users
+       WHERE user_id = $1`,
+      [userId],
+    );
+  }
+
   return db.oneOrNone<UserProfileStats>(
-    `SELECT user_id, username, wins, losses, abandoned_games
+    `SELECT user_id, username,
+            0::int AS wins,
+            0::int AS losses,
+            0::int AS abandoned_games
      FROM users
      WHERE user_id = $1`,
     [userId],
@@ -77,6 +107,10 @@ const getProfileStats = async (userId: number) => {
 };
 
 const incrementWins = async (userId: number) => {
+  if (!(await hasProfileStatsColumns())) {
+    return;
+  }
+
   await db.none(
     `UPDATE users SET wins = wins + 1, updated_at = NOW() WHERE user_id = $1`,
     [userId],
@@ -84,7 +118,7 @@ const incrementWins = async (userId: number) => {
 };
 
 const incrementLossesForUsers = async (userIds: number[]) => {
-  if (!userIds.length) {
+  if (!userIds.length || !(await hasProfileStatsColumns())) {
     return;
   }
 
@@ -98,6 +132,10 @@ const incrementLossesForUsers = async (userIds: number[]) => {
 };
 
 const incrementAbandonedGames = async (userId: number) => {
+  if (!(await hasProfileStatsColumns())) {
+    return;
+  }
+
   await db.none(
     `UPDATE users
      SET abandoned_games = abandoned_games + 1,
