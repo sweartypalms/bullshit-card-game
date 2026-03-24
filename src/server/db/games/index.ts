@@ -213,6 +213,13 @@ export const getUserCards = async (userId: number, gameId: number) => {
   );
 };
 
+const setGameStarted = async (gameId: number, started: boolean) => {
+  await db.none(
+    `UPDATE game_room SET game_started = $1 WHERE game_room_id = $2`,
+    [started, gameId],
+  );
+};
+
 const resetDeckState = async (gameId: number) => {
   await db.none(`DELETE FROM card WHERE deck_deck_id = $1`, [gameId]);
   await db.none(
@@ -220,7 +227,8 @@ const resetDeckState = async (gameId: number) => {
      SET current_players_turn = NULL,
          last_played_user_id = NULL,
          last_played_cards = NULL,
-         current_supposed_rank = 1
+         current_supposed_rank = 1,
+         game_started = FALSE
      WHERE game_room_id = $1`,
     [gameId],
   );
@@ -242,6 +250,7 @@ export const start = async (gameId: number) => {
       await resetDeckState(gameId);
     } else {
       await setFirstPlayer(gameId, existingFirstTurnPlayer.user_user_id);
+      await setGameStarted(gameId, true);
       return;
     }
   }
@@ -261,6 +270,7 @@ export const start = async (gameId: number) => {
     throw new Error("Could not determine the Ace of Spades holder.");
   }
   await setFirstPlayer(gameId, firstTurnPlayer.user_user_id);
+  await setGameStarted(gameId, true);
 };
 
 export async function setSupposedRank(gameId: number, rank: number) {
