@@ -12,6 +12,23 @@ import {
 
 const router = express.Router();
 
+const emitLobbyGames = async (request: Request) => {
+  const io = request.app.get("io");
+  const games = await getAvailableGames();
+  io.to("lobby").emit("lobby:games", { games });
+};
+
+const emitGameState = async (request: Request, gameId: number) => {
+  const io = request.app.get("io");
+  const players = await Game.getPlayersInGame(gameId);
+  const gameInfo = await Game.getGameInfo(gameId);
+
+  io.to(String(gameId)).emit("game:update", {
+    players,
+    gameInfo,
+  });
+};
+
 router.post("/create", async (request: Request, response: Response) => {
   // @ts-ignore
   const host_id = request.session?.user_id as number;
@@ -27,6 +44,7 @@ router.post("/create", async (request: Request, response: Response) => {
       password,
       host_id,
     );
+    await emitLobbyGames(request);
     response.redirect(`/games/${gameId}`);
   } catch (error: any) {
     // Check for unique constraint violation (Postgres error code 23505)
@@ -42,6 +60,8 @@ router.post("/create", async (request: Request, response: Response) => {
         roomId: 0,
         // @ts-ignore
         username: request.session?.username,
+        // @ts-ignore
+        isGuest: Boolean(request.session?.isGuest),
         games,
       });
     }
@@ -95,7 +115,6 @@ router.post("/join/:gameId", async (request: Request, response: Response) => {
   // 5. All checks passed, join the game
   try {
     const playerCount = await Game.join(user_id, Number(gameId), password);
-    const currentPlayer = await Game.getCurrentPlayer(Number(gameId));
     // After successful join
     const io = request.app.get("io");
     // @ts-ignore
@@ -110,6 +129,8 @@ router.post("/join/:gameId", async (request: Request, response: Response) => {
 
     // Save to DB
     await saveChatMessage(Number(gameId), "Server", serverMsg);
+    await emitLobbyGames(request);
+    await emitGameState(request, Number(gameId));
 
     console.log({ playerCount });
     response.redirect(`/games/${gameId}`);
@@ -160,6 +181,8 @@ router.post("/leave/:gameId", async (request: Request, response: Response) => {
     timestamp: Date.now(),
   });
   await saveChatMessage(Number(gameId), "Server", serverMsg);
+  await emitLobbyGames(request);
+  await emitGameState(request, numericGameId);
 
   // For sendBeacon, don't redirect
   if (request.headers.accept !== "application/json") {
@@ -192,7 +215,7 @@ router.get("/:gameId", async (request: Request, response: Response) => {
     lastPlayedUser = user.username;
   }
 
-  let current_supposed_rank = await Game.getSupposedRank(Number(gameId));
+  const current_supposed_rank = await Game.getSupposedRank(Number(gameId));
   console.log("current_supposed_rank" + current_supposed_rank);
 
   if (!game || !game.game_room_name) {
@@ -243,7 +266,7 @@ router.post("/:gameId/play", async (req, res) => {
 
   // Get current supposed rank
   const gameInfo = await Game.getGameInfo(Number(gameId));
-  let supposedRank = gameInfo.current_supposed_rank;
+  const supposedRank = gameInfo.current_supposed_rank;
 
   // ...validate and process the play...
 

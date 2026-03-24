@@ -18,10 +18,10 @@
       Game name: <%= game_name %>
 
         <div>
-          <h2>Current Players <%=players.length %>/<%= max_players %>:</h2>
-          <ul>
+          <h2>Current Players <span id="player-count"><%=players.length %>/<%= max_players %></span>:</h2>
+          <ul id="players-list">
             <% players.forEach(function(player) { %>
-              <li>
+              <li class="player">
                 <%= player.username %>
               </li>
               <% }); %>
@@ -32,9 +32,11 @@
           Current Turn: <%= currentPlayer %>
         </h2>
         <% if (isHost) { %>
-          <button id="start-btn" class="start-btn" <% if (players.length < min_players) { %>
+          <button id="start-btn" class="start-btn" style="background-color: <%= players.length >= min_players ? '#2ecc71' : '#e74c3c' %>; color: white;" <% if (players.length < min_players) { %>
             disabled
             title="Need at least <%= min_players %> players to start"
+              <% } else { %>
+            title="Enough players have joined. You can start the game."
               <% } %>>
                 Start Game
           </button>
@@ -47,6 +49,10 @@
 
             <div>
               <h2>Your Cards:</h2>
+              <div style="display:none;">
+                <span id="min-players"><%= min_players %></span>
+                <span id="max-players"><%= max_players %></span>
+              </div>
               <% function rankOrder(cardNum) { return Math.floor((cardNum - 1) / 4); } function suitOrder(cardNum) {
                 return (cardNum - 1) % 4; } const sortedCards=userCards.slice().sort((a, b)=> {
                 const rankDiff = rankOrder(a.card_rank) - rankOrder(b.card_rank);
@@ -165,11 +171,7 @@ socket.on("game:update", (state) => {
     const selected = Array.from(document.querySelectorAll('.card-checkbox:checked'))
       .map(cb => Number(cb.value));
 
-    // Get the pile ID (set this appropriately for your game)
-    // For example, if you have a hidden input or JS variable:
-    // const gameCardPileId = document.getElementById('pile-id').value;
-    // Or, if you know the pile ID in JS:
-    const gameCardPileId = roomId; // <-- Replace with your actual pile ID logic
+    const gameCardPileId = roomId;
 
     fetch(`/games/<%= gameId %>/play`, {
       method: "POST",
@@ -177,7 +179,6 @@ socket.on("game:update", (state) => {
       body: JSON.stringify({ cards: selected, pileId: gameCardPileId }),
     }).then(res => {
       if (res.ok) {
-        // Optionally, clear selection
         checkboxes.forEach(cb => cb.checked = false);
         playBtn.disabled = true;
       }

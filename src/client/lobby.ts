@@ -1,4 +1,4 @@
-import test from "node:test";
+import { socket } from "./socket";
 
 const modalButton = document.querySelector(
   "#open-create-modal",
@@ -7,7 +7,10 @@ const modal = document.querySelector(
   "#create-game-modal",
 ) as HTMLElement | null;
 const closeButton = modal?.querySelector(".close-button") as HTMLElement | null;
-const createGame = document.querySelector("#create-game") as HTMLElement | null;
+const availableGames = document.getElementById("available-games");
+const warningMessage = document.getElementById("lobby-warning");
+
+socket.emit("joinLobby");
 
 modalButton?.addEventListener("click", () => {
   if (modal) {
@@ -28,36 +31,45 @@ window.addEventListener("click", (event) => {
   }
 });
 
-createGame?.addEventListener("click", async () => {
-  const gameName = (document.getElementById("game-name") as HTMLInputElement)
-    .value;
-  const password = (document.getElementById("password") as HTMLInputElement)
-    .value;
-  const minPlayers = (document.getElementById("min-player") as HTMLInputElement)
-    .value;
-  const maxPlayers = (
-    document.getElementById("max-players") as HTMLInputElement
-  ).value;
+type LobbyGame = {
+  game_room_id: number;
+  game_room_name: string;
+  max_players: number;
+  current_players: number;
+};
 
-  const data = {
-    gameName,
-    password,
-    minPlayers,
-    maxPlayers,
-  };
+const renderGames = (games: LobbyGame[]) => {
+  if (!availableGames) {
+    return;
+  }
 
-  try {
-    const response = await fetch("/create-game", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
+  if (!games.length) {
+    availableGames.innerHTML = "<li>No games available.</li>";
+    return;
+  }
 
-    const result = await response.json();
-    console.log(result);
-  } catch (err) {
-    console.error("Error creating game:", err);
+  availableGames.innerHTML = games
+    .map(
+      (game) => `
+        <li>
+          <span class="status waiting">Waiting</span>
+          <span class="game-name">${game.game_room_name}</span>
+          <span class="game-players">${game.current_players}/${game.max_players} players</span>
+          <form method="post" action="/games/join/${game.game_room_id}">
+            <input type="text" name="password" placeholder="Password?" />
+            <button type="submit">Join</button>
+          </form>
+        </li>
+      `,
+    )
+    .join("");
+};
+
+socket.on("lobby:games", ({ games, warning }) => {
+  renderGames(games);
+
+  if (warningMessage) {
+    warningMessage.textContent = warning ?? "";
+    warningMessage.style.display = warning ? "block" : "none";
   }
 });

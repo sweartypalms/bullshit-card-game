@@ -26,6 +26,11 @@ const configureSockets = (
       console.warn("User session data is missing or incomplete.");
     }
 
+    socket.on("joinLobby", () => {
+      socket.join("lobby");
+      console.log(`Socket ${socket.id} joined lobby updates`);
+    });
+
     // Allow clients to join a game room for chat
     socket.on("joinRoom", (roomId) => {
       socket.join(roomId);
@@ -51,6 +56,8 @@ const configureSockets = (
         console.log(`User [${username}] disconnected`);
         socket.leave(user_id.toString());
       }
+
+      socket.leave("lobby");
     });
   });
 };

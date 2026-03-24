@@ -10,8 +10,8 @@ socket.emit("joinRoom", roomId);
 // Listen for real-time game state updates from the server
 socket.on("game:update", (data) => {
   // Update the UI with the new game state
-  updateGameInfo(data.gameInfo);
-  updatePlayersList(data.players);
+  updateGameInfo(data.gameInfo, data.players ?? []);
+  updatePlayersList(data.players ?? []);
 });
 
 socket.on("game:winner", ({ winner }) => {
@@ -52,26 +52,40 @@ socket.on("game:supposedRank", function (data) {
   }
 });
 
-function updateGameInfo(gameInfo: any) {
+function updateGameInfo(gameInfo: any, players: any[]) {
   // Update game info in the DOM as needed
   const minPlayers = document.getElementById("min-players");
   const maxPlayers = document.getElementById("max-players");
-  if (minPlayers) minPlayers.textContent = gameInfo.min_players;
-  if (maxPlayers) maxPlayers.textContent = gameInfo.max_players;
+  if (minPlayers) minPlayers.textContent = String(gameInfo.min_players);
+  if (maxPlayers) maxPlayers.textContent = String(gameInfo.max_players);
+
+  const startButton = document.getElementById("start-btn") as HTMLButtonElement | null;
+  if (startButton) {
+    const canStart = players.length >= Number(gameInfo.min_players);
+    startButton.disabled = !canStart;
+    startButton.style.backgroundColor = canStart ? "#2ecc71" : "#e74c3c";
+    startButton.title = canStart
+      ? "Enough players have joined. You can start the game."
+      : `Need at least ${gameInfo.min_players} players to start`;
+  }
 }
 
 // Add this function to update the players list in the UI
-// This replaces the server-side getPlayersInGame function
 function updatePlayersList(players: any[]) {
-  // Update your players list in the DOM
-  // Example implementation:
   const playersContainer = document.getElementById("players-list");
-  if (playersContainer && players) {
+  const playerCount = document.getElementById("player-count");
+  const maxPlayers = document.getElementById("max-players");
+
+  if (playersContainer) {
     playersContainer.innerHTML = players
       .map(
         (player) =>
-          `<div class="player">${player.username || player.name}</div>`,
+          `<li class="player">${player.username || player.name}</li>`,
       )
       .join("");
+  }
+
+  if (playerCount && maxPlayers) {
+    playerCount.textContent = `${players.length}/${maxPlayers.textContent ?? "?"}`;
   }
 }

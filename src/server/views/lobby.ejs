@@ -54,7 +54,7 @@
                     </div>
 
                     <h2>✨ Join a Game</h2>
-                    <!-- Show current games (if any) -->
+                    <div id="lobby-warning" class="warning" style="display: <%= warning ? 'block' : 'none' %>;"><%= warning || '' %></div>
                     <ul id="available-games">
                         <% if (games && games.length> 0) { %>
                             <% games.forEach(function(game) { %>
@@ -70,12 +70,6 @@
                                         <input type="text" name="password" placeholder="Password?" />
                                         <button type="submit">Join</button>
                                     </form>
-                                    <!-- (Warning) message on joining games -->
-                                    <% if (warning) { %>
-                                        <div class="warning">
-                                            <%= warning %>
-                                        </div>
-                                        <% } %>
                                 </li>
                                 <% }); %>
                                     <% } else { %>
