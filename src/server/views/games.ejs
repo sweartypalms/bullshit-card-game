@@ -38,11 +38,14 @@
         </div>
 
         <div class="game-action-row">
-          <% if (isHost) { %>
-            <button id="start-btn" class="start-btn <%= gameStarted ? 'game-started' : '' %>" style="background-color: <%= gameStarted ? '#a0a7b4' : (players.length >= min_players ? '#2ecc71' : '#e74c3c') %>; color: white;" <% if (gameStarted) { %>disabled title="The game has already started"<% } else if (players.length < min_players) { %>disabled title="Need at least <%= min_players %> players to start"<% } else { %>title="Enough players have joined. You can start the game."<% } %>>
-              <%= gameStarted ? 'Game Started' : 'Start Game' %>
+          <% if (isHost && !gameStarted) { %>
+            <button id="start-btn" class="start-btn" style="background-color: <%= players.length >= min_players ? '#2ecc71' : '#e74c3c' %>; color: white;" <% if (players.length < min_players) { %>disabled title="Need at least <%= min_players %> players to start"<% } else { %>title="Enough players have joined. You can start the game."<% } %>>
+              Start Game
             </button>
           <% } %>
+          <button id="play-cards-btn" class="play-cards-btn" <% if (username !==currentPlayer) { %>disabled<% } %>>
+            Play Selected Cards
+          </button>
           <button id="bs-btn" style="background-color: <%= (username !== lastPlayedUser) ? '#e74c3c' : '#ccc' %>; color: white;" <% if (username===lastPlayedUser) { %>disabled<% } %>>
             Bullshit!
           </button>
@@ -95,9 +98,6 @@
             <% }); %>
           </ul>
           <div class="hand-actions">
-            <button id="play-cards-btn" <% if (username !==currentPlayer) { %>disabled<% } %>>
-              Play Selected Cards
-            </button>
             <div id="turn-notice" style="color: #888; font-size: 0.9em;">
               <% if (username===currentPlayer) { %>It's your turn.<% } else { %>It's <%= currentPlayer %>'s turn.<% } %>
             </div>

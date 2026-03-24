@@ -151,20 +151,16 @@ function updateGameInfo(
   const startButton = document.getElementById("start-btn") as HTMLButtonElement | null;
   if (startButton) {
     const gameStarted = Boolean(gameInfo.game_started);
-    const canStart = players.length >= Number(gameInfo.min_players) && !gameStarted;
-    startButton.disabled = !canStart;
-    startButton.textContent = gameStarted ? "Game Started" : "Start Game";
-    startButton.classList.toggle("game-started", gameStarted);
-    startButton.style.backgroundColor = gameStarted
-      ? "#a0a7b4"
-      : canStart
-        ? "#2ecc71"
-        : "#e74c3c";
-    startButton.title = gameStarted
-      ? "The game has already started"
-      : canStart
+    if (gameStarted) {
+      startButton.remove();
+    } else {
+      const canStart = players.length >= Number(gameInfo.min_players);
+      startButton.disabled = !canStart;
+      startButton.style.backgroundColor = canStart ? "#2ecc71" : "#e74c3c";
+      startButton.title = canStart
         ? "Enough players have joined. You can start the game."
         : `Need at least ${gameInfo.min_players} players to start`;
+    }
   }
 }
 
