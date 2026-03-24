@@ -59,34 +59,22 @@
                 const rankDiff = rankOrder(a.card_rank) - rankOrder(b.card_rank);
                 return rankDiff !== 0 ? rankDiff : suitOrder(a.card_rank) - suitOrder(b.card_rank);
                 });
-                function cardRank(cardNum) {
+                function cardName(cardNum) {
                 const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
-                return ranks[Math.floor((cardNum - 1) / 4)];
-                }
-                function cardSuit(cardNum) {
-                const suits = ["&spades;", "&clubs;", "&diams;", "&hearts;"];
-                return suits[(cardNum - 1) % 4];
-                }
-                function cardColor(cardNum) {
-                return ((cardNum - 1) % 4) >= 2 ? 'card-red' : 'card-black';
+                const suits = ["s", "c", "d", "h"];
+                const zeroBased = cardNum - 1;
+                const rank = ranks[Math.floor(zeroBased / 4)];
+                const suit = suits[zeroBased % 4];
+                return rank + suit;
                 }
                 %>
                 <ul id="my-cards">
                   <% sortedCards.forEach(function(card) { %>
                     <li>
-                      <label class="card-option">
-                        <input type="checkbox" name="selectedCards" value="<%= card.card_rank %>" class="card-checkbox" />
-                        <span class="card-face <%= cardColor(card.card_rank) %>">
-                          <span class="card-corner top">
-                            <span class="card-rank"><%= cardRank(card.card_rank) %></span>
-                            <span class="card-suit-small"><%- cardSuit(card.card_rank) %></span>
-                          </span>
-                          <span class="card-center"><%- cardSuit(card.card_rank) %></span>
-                          <span class="card-corner bottom">
-                            <span class="card-rank"><%= cardRank(card.card_rank) %></span>
-                            <span class="card-suit-small"><%- cardSuit(card.card_rank) %></span>
-                          </span>
-                        </span>
+                      <label>
+                        <input type="checkbox" name="selectedCards" value="<%= card.card_rank %>"
+                          class="card-checkbox" />
+                        <%= cardName(card.card_rank) %> (<%= card.card_rank %>)
                       </label>
                     </li>
                     <% }); %>
@@ -96,10 +84,10 @@
                     Play Selected Cards
                 </button>
                 <div id="turn-notice" style="color: #888; font-size: 0.9em;"><% if (username===currentPlayer) { %>It's your turn.<% } else { %>It's <%= currentPlayer %>'s turn.<% } %></div>
-                    <h3 id="supposed-card">
-                      Supposed Card:
+                    <h3 id="current-card">
+                      Current Card:
                       <%= ["A", "2" , "3" , "4" , "5" , "6" , "7" , "8" , "9" , "10" , "J" , "Q" , "K"
-                        ][Math.floor((supposedRank - 1) / 4)] %>
+                        ][Math.floor((currentRank - 1) / 4)] %>
                     </h3>
 
             </div>

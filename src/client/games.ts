@@ -47,7 +47,7 @@ socket.on("game:winner", ({ winner }) => {
     .forEach((btn) => ((btn as HTMLButtonElement).disabled = true));
 });
 
-socket.on("game:supposedRank", function (data) {
+socket.on("game:currentCard", function (data) {
   const ranks = [
     "A",
     "2",
@@ -63,10 +63,10 @@ socket.on("game:supposedRank", function (data) {
     "Q",
     "K",
   ];
-  const h3 = document.getElementById("supposed-card");
+  const h3 = document.getElementById("current-card");
   if (h3) {
-    const rankIndex = Math.floor((data.supposedRank - 1) / 4);
-    h3.innerHTML = "Supposed Card: " + ranks[rankIndex];
+    const rankIndex = Math.floor((data.currentRank - 1) / 4);
+    h3.innerHTML = "Current Card: " + ranks[rankIndex];
   }
 });
 
@@ -80,11 +80,17 @@ function updateGameInfo(
   const maxPlayers = document.getElementById("max-players");
   const currentPlayerLabel = document.getElementById("current-player-name");
   const hostLabel = document.getElementById("host-name");
+  const currentCardLabel = document.getElementById("current-card");
+  const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
   if (minPlayers) minPlayers.textContent = String(gameInfo.min_players);
   if (maxPlayers) maxPlayers.textContent = String(gameInfo.max_players);
   if (currentPlayerLabel)
     currentPlayerLabel.textContent = activePlayerName ?? "Waiting...";
   if (hostLabel) hostLabel.textContent = hostUsername ?? "Unknown";
+  if (currentCardLabel) {
+    const rankIndex = Math.floor((gameInfo.current_supposed_rank - 1) / 4);
+    currentCardLabel.textContent = `Current Card: ${ranks[rankIndex]}`;
+  }
 
   const startButton = document.getElementById("start-btn") as HTMLButtonElement | null;
   if (startButton) {

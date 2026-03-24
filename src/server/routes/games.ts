@@ -243,7 +243,7 @@ router.get("/:gameId", async (request: Request, response: Response) => {
     max_players: gameInfo.max_players,
     userCards,
     currentPlayer: currentPlayer?.username,
-    supposedRank: gameInfo.current_supposed_rank,
+    currentRank: gameInfo.current_supposed_rank,
     lastPlayedUser: state.lastPlayedUser,
     hostUsername: state.hostUsername,
   });
@@ -256,10 +256,10 @@ router.post("/:gameId/play", async (req, res) => {
   const { cards } = req.body;
 
   const gameInfo = await Game.getGameInfo(numericGameId);
-  const supposedRank = gameInfo.current_supposed_rank;
+  const currentRank = gameInfo.current_supposed_rank;
 
-  let nextSupposedRank = supposedRank + 4;
-  if (nextSupposedRank > 52) nextSupposedRank = 1;
+  let nextCurrentRank = currentRank + 4;
+  if (nextCurrentRank > 52) nextCurrentRank = 1;
 
   const ranks = [
     "A",
@@ -276,7 +276,7 @@ router.post("/:gameId/play", async (req, res) => {
     "Q",
     "K",
   ];
-  const rankName = ranks[Math.floor((supposedRank - 1) / 4)];
+  const rankName = ranks[Math.floor((currentRank - 1) / 4)];
 
   await Game.moveCardsToPile(cards.map(Number), numericGameId);
   // @ts-ignore
@@ -299,8 +299,8 @@ router.post("/:gameId/play", async (req, res) => {
   const current_players_username = current_player.username;
 
   await Game.setCurrentPlayerTurn(numericGameId, nextPlayer.user_id);
-  io.to(gameId).emit("game:supposedRank", { supposedRank: supposedRank });
-  await Game.setSupposedRank(numericGameId, nextSupposedRank);
+  await Game.setSupposedRank(numericGameId, nextCurrentRank);
+  io.to(gameId).emit("game:currentCard", { currentRank: nextCurrentRank });
 
   const playerTurnMessage = `${current_players_username} has played ${cards.length} card${cards.length > 1 ? "s" : ""} of rank ${rankName}`;
   io.to(gameId).emit(`chat:message:${gameId}`, {
@@ -339,12 +339,16 @@ router.get("/:gameId/start-test", async (req, res) => {
     // @ts-ignore
     await Game.touchUser(req.session.user_id);
     const currentPlayer = await Game.getCurrentPlayer(numericGameId);
+    const gameInfo = await Game.getGameInfo(numericGameId);
 
     if (!currentPlayer?.username) {
       throw new Error("Current turn could not be determined after the game started.");
     }
 
     const io = req.app.get("io");
+    io.to(gameId).emit("game:currentCard", {
+      currentRank: gameInfo.current_supposed_rank,
+    });
     io.to(gameId).emit(`chat:message:${gameId}`, {
       sender: { username: "Server" },
       message: `It's ${currentPlayer.username}'s turn!`,
@@ -370,11 +374,11 @@ router.post("/:gameId/bs", (request: Request, response: Response) => {
     const user_id = request.session.user_id;
 
     const gameInfo = await Game.getGameInfo(numericGameId);
-    const current_supposed_rank = gameInfo.current_supposed_rank;
+    const currentRank = gameInfo.current_supposed_rank;
 
-    let prevSupposedRank = current_supposed_rank - 4;
-    if (prevSupposedRank < 1) prevSupposedRank += 52;
-    const prevSupposedRankIndex = Math.floor((prevSupposedRank - 1) / 4);
+    let prevCurrentRank = currentRank - 4;
+    if (prevCurrentRank < 1) prevCurrentRank += 52;
+    const prevCurrentRankIndex = Math.floor((prevCurrentRank - 1) / 4);
 
     const {
       last_played_cards,
@@ -393,7 +397,7 @@ router.post("/:gameId/bs", (request: Request, response: Response) => {
 
     const allMatch = last_played_cards.every(
       (cardRank: number) =>
-        Math.floor((cardRank - 1) / 4) === prevSupposedRankIndex,
+        Math.floor((cardRank - 1) / 4) === prevCurrentRankIndex,
     );
 
     const pileCards = await Game.getPileCards(game_card_pile_game_card_pile_id);
