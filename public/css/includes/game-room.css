@@ -353,6 +353,25 @@
   border-radius: 12px;
 }
 
+.abandon-game-btn {
+  min-width: 180px;
+  padding: 0.85em 1.6em;
+  font-size: 1rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #5d6675 0%, #414a57 100%);
+  color: #ffffff;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.abandon-game-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 20px rgba(65, 74, 87, 0.24);
+  background: linear-gradient(135deg, #4c5563 0%, #343b46 100%);
+}
+
 @media (min-width: 900px) {
   #my-cards {
     flex-wrap: nowrap;

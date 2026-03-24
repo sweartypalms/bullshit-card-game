@@ -145,6 +145,24 @@ router.post("/join/:gameId", async (request: Request, response: Response) => {
   }
 });
 
+router.post("/abandon/:gameId", async (request: Request, response: Response) => {
+  const { gameId } = request.params;
+  const numericGameId = Number(gameId);
+  const io = request.app.get("io");
+  // @ts-ignore
+  const username = request.session.username;
+
+  io.to(gameId).emit("game:ended", {
+    message: username + " abandoned the game. The game has ended.",
+    redirectTo: "/lobby",
+  });
+
+  await Game.deleteGame(numericGameId);
+  await emitLobbyGames(request);
+
+  response.status(204).end();
+});
+
 router.post("/leave/:gameId", async (request: Request, response: Response) => {
   const { gameId } = request.params;
   const numericGameId = Number(gameId);

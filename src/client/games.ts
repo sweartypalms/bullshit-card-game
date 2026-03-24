@@ -83,7 +83,13 @@ socket.on("game:update", (data) => {
   updateTurnActions();
 });
 
-socket.on("game:ended", ({ message }) => {
+socket.on("game:ended", ({ message, redirectTo }) => {
+  if (redirectTo) {
+    alert(message || "The game has ended.");
+    window.location.href = redirectTo;
+    return;
+  }
+
   showGameOverlay(message || "The game has ended.");
 });
 
@@ -316,6 +322,25 @@ const exitGameButton = document.getElementById("exit-game-btn");
 if (exitGameButton) {
   exitGameButton.addEventListener("click", () => {
     window.location.href = "/lobby";
+  });
+}
+
+const abandonGameButton = document.getElementById("abandon-game-btn");
+if (abandonGameButton) {
+  abandonGameButton.addEventListener("click", () => {
+    const confirmed = window.confirm("Are you sure you want to abandon this game?");
+    if (!confirmed) {
+      return;
+    }
+
+    fetch("/games/abandon/" + roomId, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    }).then((response) => {
+      if (!response.ok) {
+        alert("Could not abandon the game. Please try again.");
+      }
+    });
   });
 }
 
