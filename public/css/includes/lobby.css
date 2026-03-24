@@ -40,44 +40,56 @@ body#lobby ul {
 }
 
 .lobby-presence-card {
-  margin-bottom: 24px;
-  padding: 20px;
-  border-radius: 18px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
   background: linear-gradient(180deg, #ffffff 0%, #f5fbff 100%);
   border: 1px solid #dfe6e9;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
 }
 
 .lobby-presence-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 14px;
+  gap: 10px;
+  margin-bottom: 8px;
 }
 
 .lobby-presence-header h2 {
   margin: 0;
   border-bottom: none;
   padding-bottom: 0;
+  font-size: 1.15rem;
 }
 
 .online-count {
-  min-width: 44px;
-  padding: 6px 12px;
+  min-width: 34px;
+  padding: 4px 8px;
   border-radius: 999px;
   background: #55efc4;
   color: #00695c;
+  font-size: 0.84rem;
   font-weight: 700;
   text-align: center;
+}
+
+.online-player-list {
+  display: grid;
+  gap: 4px;
+  max-height: 148px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .online-player-list li {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 0;
+  gap: 8px;
+  padding: 4px 0;
   border-bottom: 1px solid #eef3f6;
+  font-size: 0.9rem;
+  line-height: 1.2;
 }
 
 .online-player-list li:last-child {
@@ -86,11 +98,11 @@ body#lobby ul {
 }
 
 .online-indicator {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 999px;
   background: #2ecc71;
-  box-shadow: 0 0 0 4px rgba(46, 204, 113, 0.16);
+  box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.14);
   flex: 0 0 auto;
 }
 
