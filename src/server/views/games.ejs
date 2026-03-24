@@ -4,28 +4,26 @@
   <meta charset="UTF-8" />
   <title>Gator Tot's BS Game Lobby</title>
   <%- include('shared/head') %>
-    <script src="/socket.io/socket.io.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
 </head>
 
 <body data-username="<%= username %>">
   <div id="container">
     <%- include('shared/menu') %>
-      <h1>
 
-        Welcome, <%= username %>!
-      </h1>
+    <h1>Welcome, <%= username %>!</h1>
 
-      Game name: <%= game_name %>
-      <p><strong>Host:</strong> <span id="host-name"><%= hostUsername %></span></p>
+    <div class="game-room-layout">
+      <section class="game-main-panel">
+        <p class="game-name">Game name: <strong><%= game_name %></strong></p>
+        <p><strong>Host:</strong> <span id="host-name"><%= hostUsername %></span></p>
 
         <div>
           <h2>Current Players <span id="player-count"><%=players.length %>/<%= max_players %></span>:</h2>
           <ul id="players-list">
             <% players.forEach(function(player) { %>
-              <li class="player">
-                <%= player.username %>
-              </li>
-              <% }); %>
+              <li class="player"><%= player.username %></li>
+            <% }); %>
           </ul>
         </div>
 
@@ -39,160 +37,174 @@
             Waiting for <%= currentPlayer %>
           <% } %>
         </div>
-        <% if (isHost) { %>
-          <button id="start-btn" class="start-btn" style="background-color: <%= players.length >= min_players ? '#2ecc71' : '#e74c3c' %>; color: white;" <% if (players.length < min_players) { %>
-            disabled
-            title="Need at least <%= min_players %> players to start"
-              <% } else { %>
-            title="Enough players have joined. You can start the game."
-              <% } %>>
-                Start Game
-          </button>
-          <% } %>
-            <button id="bs-btn"
-              style="background-color: <%= (username !== lastPlayedUser) ? '#e74c3c' : '#ccc' %>; color: white;"
-              <% if (username===lastPlayedUser) { %>disabled<% } %>>
-                Bullshit!
+
+        <div class="game-action-row">
+          <% if (isHost) { %>
+            <button id="start-btn" class="start-btn" style="background-color: <%= players.length >= min_players ? '#2ecc71' : '#e74c3c' %>; color: white;" <% if (players.length < min_players) { %>disabled title="Need at least <%= min_players %> players to start"<% } else { %>title="Enough players have joined. You can start the game."<% } %>>
+              Start Game
             </button>
+          <% } %>
+          <button id="bs-btn" style="background-color: <%= (username !== lastPlayedUser) ? '#e74c3c' : '#ccc' %>; color: white;" <% if (username===lastPlayedUser) { %>disabled<% } %>>
+            Bullshit!
+          </button>
+        </div>
 
-            <div>
-              <h2>Your Cards:</h2>
-              <div style="display:none;">
-                <span id="min-players"><%= min_players %></span>
-                <span id="max-players"><%= max_players %></span>
-              </div>
-              <% function rankOrder(cardNum) { return Math.floor((cardNum - 1) / 4); } function suitOrder(cardNum) {
-                return (cardNum - 1) % 4; } const sortedCards=userCards.slice().sort((a, b)=> {
-                const rankDiff = rankOrder(a.card_rank) - rankOrder(b.card_rank);
-                return rankDiff !== 0 ? rankDiff : suitOrder(a.card_rank) - suitOrder(b.card_rank);
-                });
-                function cardName(cardNum) {
-                const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
-                const suits = ["s", "c", "d", "h"];
-                const zeroBased = cardNum - 1;
-                const rank = ranks[Math.floor(zeroBased / 4)];
-                const suit = suits[zeroBased % 4];
-                return rank + suit;
-                }
-                %>
-                <ul id="my-cards">
-                  <% sortedCards.forEach(function(card) { %>
-                    <li>
-                      <label>
-                        <input type="checkbox" name="selectedCards" value="<%= card.card_rank %>"
-                          class="card-checkbox" />
-                        <%= cardName(card.card_rank) %> (<%= card.card_rank %>)
-                      </label>
-                    </li>
-                    <% }); %>
-                </ul>
-                <button id="play-cards-btn" <% if (username !==currentPlayer) { %>disabled<% } %>
-                    >
-                    Play Selected Cards
-                </button>
-                <div id="turn-notice" style="color: #888; font-size: 0.9em;"><% if (username===currentPlayer) { %>It's your turn.<% } else { %>It's <%= currentPlayer %>'s turn.<% } %></div>
-                    <h3 id="current-card">
-                      Current Card:
-                      <%= ["A", "2" , "3" , "4" , "5" , "6" , "7" , "8" , "9" , "10" , "J" , "Q" , "K"
-                        ][Math.floor((currentRank - 1) / 4)] %>
-                    </h3>
-
-            </div>
-  </div>
-  <div id="game-overlay" class="game-overlay" style="display:none;">
-  <div class="game-overlay-card">
-    <span id="winner-message"></span>
-    <button id="exit-game-btn" type="button">Exit Game</button>
-  </div>
-</div>
-</body>
-
-<div id="chat-window">
-  <ul id="chat-messages"></ul>
-  <form id="chat-form">
-    <input type="text" id="chat-input" autocomplete="off" placeholder="Type a message..." />
-    <button type="submit">Send</button>
-  </form>
-</div>
-<script>
-  const roomId = "<%= gameId %>";
-  const socket = io();
-  socket.emit("joinRoom", roomId);
-
-  socket.on(`chat:message:${roomId}`, function (data) {
-    const li = document.createElement("li");
-    li.textContent = `[${new Date(data.timestamp).toLocaleTimeString()}] ${data.sender.username}: ${data.message}`;
-    document.getElementById("chat-messages").appendChild(li);
-  });
-
-  document.getElementById("chat-form").addEventListener("submit", function (e) {
-    e.preventDefault();
-    const input = document.getElementById("chat-input");
-    fetch(`/chat/${roomId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: input.value }),
-    });
-    input.value = "";
-  });
-
-  fetch(`/chat/${roomId}/messages`)
-    .then(res => res.json())
-    .then(messages => {
-      messages.forEach(msg => {
-        const li = document.createElement("li");
-        li.textContent = `[${new Date(msg.timestamp).toLocaleTimeString()}] ${msg.username}: ${msg.message_content}`;
-        document.getElementById("chat-messages").appendChild(li);
-      });
-    });
-
-  document.getElementById('play-cards-btn').addEventListener('click', () => {
-    const selected = Array.from(document.querySelectorAll('.card-checkbox:checked'))
-      .map(cb => Number(cb.value));
-
-    fetch(`/games/<%= gameId %>/play`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cards: selected, pileId: roomId }),
-    }).then(res => {
-      if (res.ok) {
-        document.querySelectorAll('.card-checkbox').forEach(cb => cb.checked = false);
-      }
-    });
-  });
-
-  document.getElementById('bs-btn').addEventListener('click', function () {
-    fetch(`/games/<%= gameId %>/bs`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" }
-    }).then(res => {
-      if (res.ok) {
-        alert("You called Bullshit!");
-      }
-    });
-  });
-
-  document.addEventListener("DOMContentLoaded", function () {
-    const startBtn = document.getElementById("start-btn");
-    if (startBtn) {
-      startBtn.addEventListener("click", function () {
-        fetch(`/games/<%= gameId %>/start-test`, {
-          method: "GET"
-        })
-          .then(res => res.json())
-          .then(data => {
-            if (data.success) {
-              alert("Game started!");
-            } else {
-              alert("Failed to start game: " + (data.error || "Unknown error"));
+        <div class="player-hand-panel">
+          <h2>Your Cards:</h2>
+          <div style="display:none;">
+            <span id="min-players"><%= min_players %></span>
+            <span id="max-players"><%= max_players %></span>
+          </div>
+          <% function rankOrder(cardNum) { return Math.floor((cardNum - 1) / 4); } function suitOrder(cardNum) {
+            return (cardNum - 1) % 4; } const sortedCards=userCards.slice().sort((a, b)=> {
+            const rankDiff = rankOrder(a.card_rank) - rankOrder(b.card_rank);
+            return rankDiff !== 0 ? rankDiff : suitOrder(a.card_rank) - suitOrder(b.card_rank);
+            });
+            function cardName(cardNum) {
+            const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+            const suits = ["s", "c", "d", "h"];
+            const zeroBased = cardNum - 1;
+            const rank = ranks[Math.floor(zeroBased / 4)];
+            const suit = suits[zeroBased % 4];
+            return rank + suit;
             }
-          })
-          .catch(() => alert("Failed to start game."));
-      });
-    }
-  });
-</script>
+          %>
+          <ul id="my-cards">
+            <% sortedCards.forEach(function(card) { %>
+              <li>
+                <label>
+                  <input type="checkbox" name="selectedCards" value="<%= card.card_rank %>" class="card-checkbox" />
+                  <%= cardName(card.card_rank) %> (<%= card.card_rank %>)
+                </label>
+              </li>
+            <% }); %>
+          </ul>
+          <div class="hand-actions">
+            <button id="play-cards-btn" <% if (username !==currentPlayer) { %>disabled<% } %>>
+              Play Selected Cards
+            </button>
+            <div id="turn-notice" style="color: #888; font-size: 0.9em;">
+              <% if (username===currentPlayer) { %>It's your turn.<% } else { %>It's <%= currentPlayer %>'s turn.<% } %>
+            </div>
+          </div>
+          <h3 id="current-card">
+            Current Card:
+            <%= ["A", "2" , "3" , "4" , "5" , "6" , "7" , "8" , "9" , "10" , "J" , "Q" , "K"][Math.floor((currentRank - 1) / 4)] %>
+          </h3>
+        </div>
+      </section>
 
-<script src="/js/game.js"></script>
+      <section id="chat-window" class="game-chat-panel">
+        <div class="chat-panel-header">
+          <h2>Game Chat</h2>
+          <p>Talk to everyone in this room.</p>
+        </div>
+        <ul id="chat-messages"></ul>
+        <form id="chat-form">
+          <input type="text" id="chat-input" autocomplete="off" placeholder="Type a message..." />
+          <button type="submit">Send</button>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <div id="game-overlay" class="game-overlay" style="display:none;">
+    <div class="game-overlay-card">
+      <span id="winner-message"></span>
+      <button id="exit-game-btn" type="button">Exit Game</button>
+    </div>
+  </div>
+
+  <script>
+    const roomId = "<%= gameId %>";
+    const socket = io();
+    const chatMessages = document.getElementById("chat-messages");
+
+    function appendChatMessage(text) {
+      const li = document.createElement("li");
+      li.className = "chat-message-item";
+      li.textContent = text;
+      chatMessages.appendChild(li);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    socket.emit("joinRoom", roomId);
+
+    socket.on(`chat:message:${roomId}`, function (data) {
+      appendChatMessage(`[${new Date(data.timestamp).toLocaleTimeString()}] ${data.sender.username}: ${data.message}`);
+    });
+
+    document.getElementById("chat-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const input = document.getElementById("chat-input");
+      if (!input.value.trim()) {
+        return;
+      }
+
+      fetch(`/chat/${roomId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: input.value }),
+      });
+      input.value = "";
+    });
+
+    fetch(`/chat/${roomId}/messages`)
+      .then(res => res.json())
+      .then(messages => {
+        messages.forEach(msg => {
+          appendChatMessage(`[${new Date(msg.timestamp).toLocaleTimeString()}] ${msg.username}: ${msg.message_content}`);
+        });
+      });
+
+    document.getElementById('play-cards-btn').addEventListener('click', () => {
+      const selected = Array.from(document.querySelectorAll('.card-checkbox:checked'))
+        .map(cb => Number(cb.value));
+
+      fetch(`/games/<%= gameId %>/play`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cards: selected, pileId: roomId }),
+      }).then(res => {
+        if (res.ok) {
+          document.querySelectorAll('.card-checkbox').forEach(cb => cb.checked = false);
+        }
+      });
+    });
+
+    document.getElementById('bs-btn').addEventListener('click', function () {
+      fetch(`/games/<%= gameId %>/bs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      }).then(res => {
+        if (res.ok) {
+          alert("You called Bullshit!");
+        }
+      });
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+      const startBtn = document.getElementById("start-btn");
+      if (startBtn) {
+        startBtn.addEventListener("click", function () {
+          fetch(`/games/<%= gameId %>/start-test`, {
+            method: "GET"
+          })
+            .then(res => res.json())
+            .then(data => {
+              if (data.success) {
+                alert("Game started!");
+              } else {
+                alert("Failed to start game: " + (data.error || "Unknown error"));
+              }
+            })
+            .catch(() => alert("Failed to start game."));
+        });
+      }
+    });
+  </script>
+
+  <script src="/js/game.js"></script>
+</body>
 
 </html>
