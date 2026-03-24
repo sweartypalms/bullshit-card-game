@@ -19,6 +19,9 @@ const buildGameState = async (gameId: number, userId: number) => {
   const userCards = await Game.getUserCards(userId, gameId);
   const currentPlayer = await Game.getCurrentPlayer(gameId);
   const gameRoom = await Game.getGameRoomFields(gameId, ["last_played_user_id"]);
+  const hostUser = gameInfo?.game_room_host_user_id
+    ? await Game.getUserById(gameInfo.game_room_host_user_id)
+    : null;
 
   let lastPlayedUser = null;
   if (gameRoom.last_played_user_id) {
@@ -32,6 +35,7 @@ const buildGameState = async (gameId: number, userId: number) => {
     userCards,
     currentPlayer,
     lastPlayedUser,
+    hostUsername: hostUser?.username ?? null,
   };
 };
 
@@ -149,6 +153,7 @@ router.post("/leave/:gameId", async (request: Request, response: Response) => {
   const user_id = request.session.user_id;
   // @ts-ignore
   const username = request.session.username;
+  const io = request.app.get("io");
 
   let isHost = false;
   if (user_id) {
@@ -156,31 +161,36 @@ router.post("/leave/:gameId", async (request: Request, response: Response) => {
   }
 
   if (isHost) {
+    io.to(gameId).emit("game:ended", {
+      message: `${username} was the host and left the game. The game has ended.`,
+      redirectTo: "/lobby",
+    });
     await Game.deleteGame(numericGameId);
+    await emitLobbyGames(request);
   } else if (user_id) {
     await Game.leaveGame(user_id, numericGameId);
 
     const { count } = await Game.getPlayerCount(numericGameId);
     if (count === 0) {
       await Game.deleteGame(numericGameId);
+    } else {
+      const serverMsg = `${username} has left the game.`;
+      io.to(gameId).emit(`chat:message:${gameId}`, {
+        sender: { username: "Server" },
+        message: serverMsg,
+        timestamp: Date.now(),
+      });
+      await saveChatMessage(Number(gameId), "Server", serverMsg);
+      await emitGameState(request, numericGameId);
     }
+    await emitLobbyGames(request);
   } else {
     const { count } = await Game.getPlayerCount(numericGameId);
     if (count === 0) {
       await Game.deleteGame(numericGameId);
+      await emitLobbyGames(request);
     }
   }
-
-  const io = request.app.get("io");
-  const serverMsg = `${username} has left the game.`;
-  io.to(gameId).emit(`chat:message:${gameId}`, {
-    sender: { username: "Server" },
-    message: serverMsg,
-    timestamp: Date.now(),
-  });
-  await saveChatMessage(Number(gameId), "Server", serverMsg);
-  await emitLobbyGames(request);
-  await emitGameState(request, numericGameId);
 
   if (request.headers.accept !== "application/json") {
     response.redirect("/lobby");
@@ -235,6 +245,7 @@ router.get("/:gameId", async (request: Request, response: Response) => {
     currentPlayer: currentPlayer?.username,
     supposedRank: gameInfo.current_supposed_rank,
     lastPlayedUser: state.lastPlayedUser,
+    hostUsername: state.hostUsername,
   });
 });
 
@@ -320,19 +331,22 @@ router.post("/:gameId/play", async (req, res) => {
 router.get("/:gameId/start-test", async (req, res) => {
   const { gameId } = req.params;
   const numericGameId = Number(gameId);
-  const io = req.app.get("io");
-  const currentPlayer = await Game.getCurrentPlayer(numericGameId);
 
-  if (currentPlayer && currentPlayer.username) {
+  try {
+    await Game.start(numericGameId);
+    const currentPlayer = await Game.getCurrentPlayer(numericGameId);
+
+    if (!currentPlayer?.username) {
+      throw new Error("Current turn could not be determined after the game started.");
+    }
+
+    const io = req.app.get("io");
     io.to(gameId).emit(`chat:message:${gameId}`, {
       sender: { username: "Server" },
       message: `It's ${currentPlayer.username}'s turn!`,
       timestamp: Date.now(),
     });
-  }
 
-  try {
-    await Game.start(numericGameId);
     await emitGameState(req, numericGameId);
     res.json({ success: true, message: "Game started and cards dealt!" });
   } catch (error) {

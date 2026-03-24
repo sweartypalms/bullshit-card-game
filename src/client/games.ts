@@ -14,13 +14,22 @@ let lastPlayedUserName: string | null = null;
 socket.emit("joinRoom", roomId);
 
 socket.on("game:update", (data) => {
+<<<<<<< HEAD
   currentPlayerName = data.currentPlayer?.username ?? null;
   lastPlayedUserName = data.lastPlayedUser ?? null;
 
   updateGameInfo(data.gameInfo, data.players ?? [], currentPlayerName);
+=======
+  updateGameInfo(data.gameInfo, data.players ?? [], data.currentPlayer?.username ?? null, data.hostUsername ?? null);
+>>>>>>> 8462e5f (fix: first turn logic and host controls)
   updatePlayersList(data.players ?? []);
   updateUserCards(data.userCards ?? []);
   updateTurnActions();
+});
+
+socket.on("game:ended", ({ message, redirectTo }) => {
+  alert(message || "The game has ended.");
+  window.location.href = redirectTo || "/lobby";
 });
 
 socket.on("game:winner", ({ winner }) => {
@@ -60,18 +69,28 @@ socket.on("game:supposedRank", function (data) {
   }
 });
 
+<<<<<<< HEAD
 function updateGameInfo(
   gameInfo: any,
   players: any[],
   activePlayerName: string | null,
 ) {
+=======
+function updateGameInfo(gameInfo: any, players: any[], currentPlayerName: string | null, hostUsername: string | null) {
+>>>>>>> 8462e5f (fix: first turn logic and host controls)
   const minPlayers = document.getElementById("min-players");
   const maxPlayers = document.getElementById("max-players");
   const currentPlayerLabel = document.getElementById("current-player-name");
+  const hostLabel = document.getElementById("host-name");
   if (minPlayers) minPlayers.textContent = String(gameInfo.min_players);
   if (maxPlayers) maxPlayers.textContent = String(gameInfo.max_players);
+<<<<<<< HEAD
   if (currentPlayerLabel)
     currentPlayerLabel.textContent = activePlayerName ?? "Waiting...";
+=======
+  if (currentPlayerLabel) currentPlayerLabel.textContent = currentPlayerName ?? "Waiting...";
+  if (hostLabel) hostLabel.textContent = hostUsername ?? "Unknown";
+>>>>>>> 8462e5f (fix: first turn logic and host controls)
 
   const startButton = document.getElementById("start-btn") as HTMLButtonElement | null;
   if (startButton) {

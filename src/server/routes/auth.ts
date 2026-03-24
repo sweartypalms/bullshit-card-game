@@ -1,13 +1,12 @@
 import express from "express";
 import { Request, Response } from "express";
-import db from "../db/connection"; // Import your database connection
+import db from "../db/connection";
 import { Game } from "../db";
 
 import User from "../db/users";
 
 const router = express.Router();
 
-// Register
 router.get("/register", async (_request: Request, response: Response) => {
   response.render("auth/register", { error: null });
 });
@@ -16,17 +15,15 @@ router.post("/register", async (request: Request, response: Response) => {
   const { username, password } = request.body;
 
   try {
-    // Create a record in the users table for the user (email, encrypted password)
     const user_id = await User.register(username, password);
 
     // @ts-ignore
-    request.session.user_id = user_id; // store userId in session
+    request.session.user_id = user_id;
     // @ts-ignore
     request.session.username = username;
     // @ts-ignore
     request.session.isGuest = false;
 
-    // Redirect to lobby after successful registration
     response.redirect("/lobby");
   } catch (error) {
     console.error("Registration error: ", error);
@@ -36,7 +33,6 @@ router.post("/register", async (request: Request, response: Response) => {
   }
 });
 
-// Login
 router.get("/login", async (_request: Request, response: Response) => {
   response.render("auth/login", { error: null });
 });
@@ -66,7 +62,7 @@ router.post("/login", async (request: Request, response: Response) => {
     const user_id = await User.login(username, password);
 
     // @ts-ignore
-    request.session.user_id = user_id; // store userId in session
+    request.session.user_id = user_id;
     // @ts-ignore
     request.session.username = username;
     // @ts-ignore
@@ -74,16 +70,12 @@ router.post("/login", async (request: Request, response: Response) => {
     // @ts-ignore
     const user = await db.oneOrNone(
       "SELECT game_room_id FROM users WHERE user_id = $1",
-      // @ts-ignore
       [user_id],
     );
 
-    // If user is already in a game, redirect to game_room instead of lobby
     if (user && user.game_room_id) {
-      // Redirect to the game page if in a game
       return response.redirect(`/games/${user.game_room_id}`);
     } else {
-      // Otherwise, go to the lobby
       return response.redirect("/lobby");
     }
   } catch (error) {
@@ -95,18 +87,22 @@ router.post("/login", async (request: Request, response: Response) => {
 router.get("/logout", async (request: Request, response: Response) => {
   // @ts-ignore
   const user_id = request.session.user_id;
+  // @ts-ignore
+  const username = request.session.username;
+  const io = request.app.get("io");
 
-  // Find if the user is hosting any game
   const game = await db.oneOrNone(
     "SELECT game_room_id FROM game_room WHERE game_room_host_user_id = $1",
     [user_id],
   );
 
   if (game) {
-    // If user is host, delete the game
+    io.to(String(game.game_room_id)).emit("game:ended", {
+      message: `${username} was the host and left the game. The game has ended.`,
+      redirectTo: "/lobby",
+    });
     await Game.deleteGame(game.game_room_id);
   } else {
-    // Otherwise, just remove user from any game
     await db.none("UPDATE users SET game_room_id = NULL WHERE user_id = $1", [
       user_id,
     ]);

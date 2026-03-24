@@ -130,8 +130,15 @@ export const getPlayersInGame = async (gameId: number) => {
 };
 
 export const getFirstTurnPlayer = async (gameId: number) => {
-  return db.one(
-    "SELECT user_user_id FROM card c JOIN users u ON u.user_id = c.user_user_id WHERE u.game_room_id = $1 AND c.card_rank = 1",
+  return db.oneOrNone(
+    `SELECT DISTINCT c.user_user_id
+     FROM card c
+     JOIN users u ON u.user_id = c.user_user_id
+     WHERE u.game_room_id = $1
+       AND c.deck_deck_id = $1
+       AND c.card_rank = 1
+     ORDER BY c.user_user_id
+     LIMIT 1`,
     [gameId],
   );
 };
@@ -189,24 +196,53 @@ export const getUserCards = async (userId: number, gameId: number) => {
   );
 };
 
+const resetDeckState = async (gameId: number) => {
+  await db.none(`DELETE FROM card WHERE deck_deck_id = $1`, [gameId]);
+  await db.none(
+    `UPDATE game_room
+     SET current_players_turn = NULL,
+         last_played_user_id = NULL,
+         last_played_cards = NULL,
+         current_supposed_rank = 1
+     WHERE game_room_id = $1`,
+    [gameId],
+  );
+};
+
 export const start = async (gameId: number) => {
   const { count } = await db.one(
     `SELECT COUNT(*)::int AS count FROM card WHERE deck_deck_id = $1`,
     [gameId],
   );
-  if (count >= 52) {
-    return;
+
+  if (count !== 0 && count !== 52) {
+    await resetDeckState(gameId);
   }
 
-  await db.none(GAME_START_SQL, { gameId });
+  if (count === 52) {
+    const existingFirstTurnPlayer = await getFirstTurnPlayer(gameId);
+    if (!existingFirstTurnPlayer) {
+      await resetDeckState(gameId);
+    } else {
+      await setFirstPlayer(gameId, existingFirstTurnPlayer.user_user_id);
+      return;
+    }
+  }
 
-  const players = await getPlayersInGame(gameId);
+  const { count: refreshedCount } = await db.one(
+    `SELECT COUNT(*)::int AS count FROM card WHERE deck_deck_id = $1`,
+    [gameId],
+  );
 
-  for (let i = 0; i < players.length; i++) {
+  if (refreshedCount === 0) {
+    await db.none(GAME_START_SQL, { gameId });
     await dealCards(gameId);
   }
 
   const firstTurnPlayer = await getFirstTurnPlayer(gameId);
+  if (!firstTurnPlayer) {
+    throw new Error("Could not determine the Ace of Spades holder.");
+  }
   await setFirstPlayer(gameId, firstTurnPlayer.user_user_id);
 };
 
@@ -250,10 +286,10 @@ export const dealCards = async (gameId: number) => {
     const user_id = players[i % players.length].user_id;
     const card_id = shuffledCards[i];
     queries.push(
-      db.none(`UPDATE card SET user_user_id = $1 WHERE card_rank = $2`, [
-        user_id,
-        card_id,
-      ]),
+      db.none(
+        `UPDATE card SET user_user_id = $1 WHERE deck_deck_id = $2 AND card_rank = $3`,
+        [user_id, gameId, card_id],
+      ),
     );
   }
   await Promise.all(queries);
@@ -269,7 +305,7 @@ export async function moveCardsToPile(
   await db.none(
     `UPDATE card
      SET user_user_id = 0, game_card_pile_game_card_pile_id = $2
-     WHERE card_rank = ANY($1)`,
+     WHERE deck_deck_id = $2 AND card_rank = ANY($1)`,
     [cardRanks, game_card_pile_game_card_pile_id],
   );
 }
@@ -291,7 +327,7 @@ export const getGameRoomFields = async (gameId: number, fields: string[]) => {
 export const getPileCards = async (pileId: number) => {
   return db
     .any(
-      `SELECT card_rank FROM card WHERE game_card_pile_game_card_pile_id = $1`,
+      `SELECT card_rank FROM card WHERE deck_deck_id = $1 AND game_card_pile_game_card_pile_id = $1`,
       [pileId],
     )
     .then((cards) => cards.map((c) => Number(c.card_rank)));
@@ -299,9 +335,14 @@ export const getPileCards = async (pileId: number) => {
 
 export const giveCardsToUser = async (userId: number, cardRanks: number[]) => {
   if (cardRanks.length === 0) return;
+  const user = await getUserById(userId);
+  if (!user?.game_room_id) return;
+
   return db.none(
-    `UPDATE card SET user_user_id = $1, game_card_pile_game_card_pile_id = 0 WHERE card_rank = ANY($2)`,
-    [userId, cardRanks],
+    `UPDATE card
+     SET user_user_id = $1, game_card_pile_game_card_pile_id = 0
+     WHERE deck_deck_id = $2 AND card_rank = ANY($3)`,
+    [userId, user.game_room_id, cardRanks],
   );
 };
 
