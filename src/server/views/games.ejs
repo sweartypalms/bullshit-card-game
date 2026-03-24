@@ -58,22 +58,34 @@
                 const rankDiff = rankOrder(a.card_rank) - rankOrder(b.card_rank);
                 return rankDiff !== 0 ? rankDiff : suitOrder(a.card_rank) - suitOrder(b.card_rank);
                 });
-                function cardName(cardNum) {
+                function cardRank(cardNum) {
                 const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
-                const suits = ["s", "c", "d", "h"];
-                const zeroBased = cardNum - 1;
-                const rank = ranks[Math.floor(zeroBased / 4)];
-                const suit = suits[zeroBased % 4];
-                return rank + suit;
+                return ranks[Math.floor((cardNum - 1) / 4)];
+                }
+                function cardSuit(cardNum) {
+                const suits = ["&spades;", "&clubs;", "&diams;", "&hearts;"];
+                return suits[(cardNum - 1) % 4];
+                }
+                function cardColor(cardNum) {
+                return ((cardNum - 1) % 4) >= 2 ? 'card-red' : 'card-black';
                 }
                 %>
                 <ul id="my-cards">
                   <% sortedCards.forEach(function(card) { %>
                     <li>
-                      <label>
-                        <input type="checkbox" name="selectedCards" value="<%= card.card_rank %>"
-                          class="card-checkbox" />
-                        <%= cardName(card.card_rank) %> (<%= card.card_rank %>)
+                      <label class="card-option">
+                        <input type="checkbox" name="selectedCards" value="<%= card.card_rank %>" class="card-checkbox" />
+                        <span class="card-face <%= cardColor(card.card_rank) %>">
+                          <span class="card-corner top">
+                            <span class="card-rank"><%= cardRank(card.card_rank) %></span>
+                            <span class="card-suit-small"><%- cardSuit(card.card_rank) %></span>
+                          </span>
+                          <span class="card-center"><%- cardSuit(card.card_rank) %></span>
+                          <span class="card-corner bottom">
+                            <span class="card-rank"><%= cardRank(card.card_rank) %></span>
+                            <span class="card-suit-small"><%- cardSuit(card.card_rank) %></span>
+                          </span>
+                        </span>
                       </label>
                     </li>
                     <% }); %>

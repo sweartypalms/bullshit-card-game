@@ -7,14 +7,20 @@ type Card = {
 const roomId =
   (window as any).gameId || window.location.pathname.split("/").pop();
 const currentUsername = document.body.dataset.username ?? "";
+let currentPlayerName: string | null =
+  document.getElementById("current-player-name")?.textContent ?? null;
+let lastPlayedUserName: string | null = null;
 
 socket.emit("joinRoom", roomId);
 
 socket.on("game:update", (data) => {
-  updateGameInfo(data.gameInfo, data.players ?? [], data.currentPlayer?.username ?? null);
+  currentPlayerName = data.currentPlayer?.username ?? null;
+  lastPlayedUserName = data.lastPlayedUser ?? null;
+
+  updateGameInfo(data.gameInfo, data.players ?? [], currentPlayerName);
   updatePlayersList(data.players ?? []);
   updateUserCards(data.userCards ?? []);
-  updateTurnActions(data.currentPlayer?.username ?? null, data.lastPlayedUser ?? null);
+  updateTurnActions();
 });
 
 socket.on("game:winner", ({ winner }) => {
@@ -54,13 +60,18 @@ socket.on("game:supposedRank", function (data) {
   }
 });
 
-function updateGameInfo(gameInfo: any, players: any[], currentPlayerName: string | null) {
+function updateGameInfo(
+  gameInfo: any,
+  players: any[],
+  activePlayerName: string | null,
+) {
   const minPlayers = document.getElementById("min-players");
   const maxPlayers = document.getElementById("max-players");
   const currentPlayerLabel = document.getElementById("current-player-name");
   if (minPlayers) minPlayers.textContent = String(gameInfo.min_players);
   if (maxPlayers) maxPlayers.textContent = String(gameInfo.max_players);
-  if (currentPlayerLabel) currentPlayerLabel.textContent = currentPlayerName ?? "Waiting...";
+  if (currentPlayerLabel)
+    currentPlayerLabel.textContent = activePlayerName ?? "Waiting...";
 
   const startButton = document.getElementById("start-btn") as HTMLButtonElement | null;
   if (startButton) {
@@ -81,8 +92,7 @@ function updatePlayersList(players: any[]) {
   if (playersContainer) {
     playersContainer.innerHTML = players
       .map(
-        (player) =>
-          `<li class="player">${player.username || player.name}</li>`,
+        (player) => `<li class="player">${player.username || player.name}</li>`,
       )
       .join("");
   }
@@ -99,39 +109,65 @@ function updateUserCards(cards: Card[]) {
   }
 
   const sortedCards = [...cards].sort((a, b) => {
-    const rankDiff = Math.floor((a.card_rank - 1) / 4) - Math.floor((b.card_rank - 1) / 4);
+    const rankDiff =
+      Math.floor((a.card_rank - 1) / 4) - Math.floor((b.card_rank - 1) / 4);
     if (rankDiff !== 0) {
       return rankDiff;
     }
     return ((a.card_rank - 1) % 4) - ((b.card_rank - 1) % 4);
   });
 
-  const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
-  const suits = ["s", "c", "d", "h"];
-
-  cardList.innerHTML = sortedCards
-    .map((card) => {
-      const zeroBased = card.card_rank - 1;
-      const cardName = `${ranks[Math.floor(zeroBased / 4)]}${suits[zeroBased % 4]}`;
-      return `
-        <li>
-          <label>
-            <input type="checkbox" name="selectedCards" value="${card.card_rank}" class="card-checkbox" />
-            ${cardName} (${card.card_rank})
-          </label>
-        </li>
-      `;
-    })
-    .join("");
-
+  cardList.innerHTML = sortedCards.map(renderCardMarkup).join("");
   bindCardSelection();
 }
 
-function updateTurnActions(currentPlayerName: string | null, lastPlayedUser: string | null) {
+function renderCardMarkup(card: Card) {
+  const zeroBased = card.card_rank - 1;
+  const ranks = [
+    "A",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "J",
+    "Q",
+    "K",
+  ];
+  const suits = ["&spades;", "&clubs;", "&diams;", "&hearts;"];
+  const rank = ranks[Math.floor(zeroBased / 4)];
+  const suit = suits[zeroBased % 4];
+  const colorClass = zeroBased % 4 >= 2 ? "card-red" : "card-black";
+
+  return `
+    <li>
+      <label class="card-option">
+        <input type="checkbox" name="selectedCards" value="${card.card_rank}" class="card-checkbox" />
+        <span class="card-face ${colorClass}">
+          <span class="card-corner top">
+            <span class="card-rank">${rank}</span>
+            <span class="card-suit-small">${suit}</span>
+          </span>
+          <span class="card-center">${suit}</span>
+          <span class="card-corner bottom">
+            <span class="card-rank">${rank}</span>
+            <span class="card-suit-small">${suit}</span>
+          </span>
+        </span>
+      </label>
+    </li>
+  `;
+}
+
+function updateTurnActions() {
   const playButton = document.getElementById("play-cards-btn") as HTMLButtonElement | null;
   const bsButton = document.getElementById("bs-btn") as HTMLButtonElement | null;
   const turnNotice = document.getElementById("turn-notice");
-  const selectedCards = document.querySelectorAll('.card-checkbox:checked').length;
+  const selectedCards = document.querySelectorAll(".card-checkbox:checked").length;
   const isCurrentPlayer = currentPlayerName === currentUsername;
 
   if (playButton) {
@@ -139,40 +175,33 @@ function updateTurnActions(currentPlayerName: string | null, lastPlayedUser: str
   }
 
   if (bsButton) {
-    const canCallBs = currentUsername !== lastPlayedUser;
+    const canCallBs = currentUsername !== lastPlayedUserName;
     bsButton.disabled = !canCallBs;
     bsButton.style.backgroundColor = canCallBs ? "#e74c3c" : "#ccc";
   }
 
   if (turnNotice) {
     turnNotice.textContent = isCurrentPlayer
-      ? "It's your turn."
+      ? "It's your turn. Select up to 4 cards to play."
       : `It's ${currentPlayerName ?? "another player's"} turn.`;
   }
 }
 
 function bindCardSelection() {
-  const checkboxes = document.querySelectorAll('.card-checkbox');
-  const playBtn = document.getElementById('play-cards-btn') as HTMLButtonElement | null;
+  const checkboxes = document.querySelectorAll(".card-checkbox");
 
-  checkboxes.forEach((cb) => {
-    cb.addEventListener('change', () => {
-      const checked = document.querySelectorAll('.card-checkbox:checked');
+  checkboxes.forEach((checkbox) => {
+    checkbox.addEventListener("change", () => {
+      const checked = document.querySelectorAll(".card-checkbox:checked");
       if (checked.length > 4) {
-        (cb as HTMLInputElement).checked = false;
+        (checkbox as HTMLInputElement).checked = false;
         alert("You can only select up to 4 cards.");
       }
 
-      updateTurnActions(
-        document.getElementById("current-player-name")?.textContent ?? null,
-        null,
-      );
-
-      if (playBtn) {
-        playBtn.disabled = checked.length === 0 || checked.length > 4 || document.getElementById("turn-notice")?.textContent !== "It's your turn.";
-      }
+      updateTurnActions();
     });
   });
 }
 
 bindCardSelection();
+updateTurnActions();
