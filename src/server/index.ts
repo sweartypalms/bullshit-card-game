@@ -23,6 +23,7 @@ const PORT = process.env.PORT || 3000;
 app.use(middleware.room);
 config.liveReload(app);
 config.sockets(io, app, config.session(app));
+config.inactiveGameCleanup(io);
 
 app.use(morgan("dev"));
 app.use(cookieParser());

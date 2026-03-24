@@ -34,6 +34,7 @@ export const create = async (
   );
 
   await db.none(ADD_PLAYER, [game_room_id, host_id]);
+  await touchUser(host_id);
   return game_room_id;
 };
 
@@ -60,11 +61,15 @@ export const join = async (
     throw err;
   }
 
+  await touchUser(userId);
+
+  return result.playerCount;
+};
+
+export const touchUser = async (userId: number) => {
   await db.none(`UPDATE users SET updated_at = NOW() WHERE user_id = $1`, [
     userId,
   ]);
-
-  return result.playerCount;
 };
 
 export const getGameNameById = async (gameId: number) => {
@@ -85,6 +90,18 @@ export const getAvailableGames = async () => {
      GROUP BY gr.game_room_id, gr.game_room_name, gr.max_players
      HAVING COUNT(u.user_id) > 0
      ORDER BY gr.game_room_id`,
+  );
+};
+
+export const getInactiveGames = async (minutes: number) => {
+  return db.any(
+    `SELECT gr.game_room_id, gr.game_room_name
+     FROM game_room gr
+     JOIN users u ON u.game_room_id = gr.game_room_id
+     WHERE gr.game_room_name != 'Lobby'
+     GROUP BY gr.game_room_id, gr.game_room_name
+     HAVING MAX(u.updated_at) < NOW() - ($1::text || ' minutes')::interval`,
+    [minutes],
   );
 };
 
@@ -356,7 +373,10 @@ export const setGameFinished = async (gameId: number, winnerId: number) => {
 export default {
   create,
   join,
+  touchUser,
   getGameNameById,
+  getAvailableGames,
+  getInactiveGames,
   isHost,
   deleteGame,
   leaveGame,

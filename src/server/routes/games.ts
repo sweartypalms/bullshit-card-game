@@ -279,6 +279,8 @@ router.post("/:gameId/play", async (req, res) => {
   const rankName = ranks[Math.floor((supposedRank - 1) / 4)];
 
   await Game.moveCardsToPile(cards.map(Number), numericGameId);
+  // @ts-ignore
+  await Game.touchUser(req.session.user_id);
   await Game.setLastPlayed(
     numericGameId,
     gameInfo.current_players_turn,
@@ -334,6 +336,8 @@ router.get("/:gameId/start-test", async (req, res) => {
 
   try {
     await Game.start(numericGameId);
+    // @ts-ignore
+    await Game.touchUser(req.session.user_id);
     const currentPlayer = await Game.getCurrentPlayer(numericGameId);
 
     if (!currentPlayer?.username) {
@@ -404,6 +408,8 @@ router.post("/:gameId/bs", (request: Request, response: Response) => {
     if (pileCards.length > 0) {
       await Game.giveCardsToUser(loser_id, pileCards);
     }
+
+    await Game.touchUser(user_id);
 
     const caller = await Game.getUserById(user_id);
     const lastPlayer = await Game.getUserById(last_played_user_id);

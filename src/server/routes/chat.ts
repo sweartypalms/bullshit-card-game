@@ -1,9 +1,7 @@
 import express from "express";
 import { Request, Response } from "express";
-import { ChatMessage } from "global";
 import db from "../db/connection";
-import socket from "../config/sockets";
-import { cloneTemplate, getRoomId } from "../../client/utils";
+import { Game } from "../db";
 
 const router = express.Router();
 
@@ -15,8 +13,6 @@ router.post("/:roomId", async (request: Request, response: Response) => {
   const username = request.session.username;
   // @ts-ignore
   const user_id = request.session.user_id;
-  // @ts-ignore
-  console.log("user id from server-side chat.ts", request.session.user_id);
   const io = request.app.get("io");
 
   if (!io) {
@@ -30,13 +26,12 @@ router.post("/:roomId", async (request: Request, response: Response) => {
   }
 
   try {
-    // Save the message to the database
     await db.none(
       "INSERT INTO message (game_room_game_room_id, username, message_content, user_user_id) VALUES ($1, $2, $3, $4)",
       [roomId, username, message, user_id],
     );
+    await Game.touchUser(user_id);
 
-    // Emit the message to the room
     io.emit(`chat:message:${roomId}`, {
       message,
       sender: { username },
