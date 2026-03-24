@@ -9,6 +9,8 @@ const modal = document.querySelector(
 const closeButton = modal?.querySelector(".close-button") as HTMLElement | null;
 const availableGames = document.getElementById("available-games");
 const warningMessage = document.getElementById("lobby-warning");
+const onlinePlayerCount = document.getElementById("online-player-count");
+const onlinePlayerList = document.getElementById("online-player-list");
 
 socket.emit("joinLobby");
 
@@ -38,6 +40,11 @@ type LobbyGame = {
   current_players: number;
 };
 
+type OnlinePlayer = {
+  userId: string;
+  username: string;
+};
+
 const renderGames = (games: LobbyGame[]) => {
   if (!availableGames) {
     return;
@@ -65,6 +72,32 @@ const renderGames = (games: LobbyGame[]) => {
     .join("");
 };
 
+const renderOnlinePlayers = (players: OnlinePlayer[]) => {
+  if (onlinePlayerCount) {
+    onlinePlayerCount.textContent = String(players.length);
+  }
+
+  if (!onlinePlayerList) {
+    return;
+  }
+
+  if (!players.length) {
+    onlinePlayerList.innerHTML = "<li>No players online yet.</li>";
+    return;
+  }
+
+  onlinePlayerList.innerHTML = players
+    .map(
+      (player) => `
+        <li>
+          <span class="online-indicator"></span>
+          <span>${player.username}</span>
+        </li>
+      `,
+    )
+    .join("");
+};
+
 socket.on("lobby:games", ({ games, warning }) => {
   renderGames(games);
 
@@ -72,4 +105,8 @@ socket.on("lobby:games", ({ games, warning }) => {
     warningMessage.textContent = warning ?? "";
     warningMessage.style.display = warning ? "block" : "none";
   }
+});
+
+socket.on("lobby:presence", ({ players }) => {
+  renderOnlinePlayers(players ?? []);
 });
