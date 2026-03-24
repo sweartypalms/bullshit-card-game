@@ -9,7 +9,10 @@
     <% } else { %>
       <li><a class="button-link" href="/lobby">Lobby</a></li>
     <% } %>
-    <li><a class="button-link" href="/profile">Profile</a></li>
+    <li><a class="button-link" href="/leaderboard">Leaderboard</a></li>
+    <% if (!isGuest) { %>
+      <li><a class="button-link" href="/profile">Profile</a></li>
+    <% } %>
     <% if (isGuest) { %>
       <li><a class="button-link" href="/auth/register">Register</a></li>
       <li><a class="button-link" href="/auth/login">Login</a></li>

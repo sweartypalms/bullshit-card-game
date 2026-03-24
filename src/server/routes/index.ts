@@ -5,3 +5,4 @@ export { default as lobby } from "./lobby";
 export { default as chat } from "./chat";
 export { default as games } from "./games";
 export { default as profile } from "./profile";
+export { default as leaderboard } from "./leaderboard";

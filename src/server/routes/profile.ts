@@ -58,6 +58,10 @@ router.get("/", async (request: Request, response: Response) => {
     : request.query.popup;
   const isPopup = popupQuery === "1";
 
+  if (isGuest) {
+    return response.redirect("/lobby");
+  }
+
   const stats = await User.getProfileStats(userId);
   if (!stats) {
     return response.redirect("/lobby");
@@ -92,13 +96,10 @@ router.get("/:username", async (request: Request, response: Response) => {
     return;
   }
 
-  response.render(
-    "profile",
-    {
-      ...buildProfileViewModel(stats, stats.username, false, isPopup),
-      notFound: false,
-    },
-  );
+  response.render("profile", {
+    ...buildProfileViewModel(stats, stats.username, false, isPopup),
+    notFound: false,
+  });
 });
 
 export default router;

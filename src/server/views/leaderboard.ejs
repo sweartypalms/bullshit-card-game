@@ -1,0 +1,99 @@
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Leaderboard</title>
+  <%- include('shared/head') %>
+</head>
+
+<body>
+  <div id="container">
+    <%- include('shared/menu') %>
+
+    <section class="leaderboard-shell">
+      <div class="leaderboard-hero">
+        <div>
+          <p class="leaderboard-kicker">Player Rankings</p>
+          <h1>Leaderboard</h1>
+          <p class="leaderboard-subtitle">Registered players only. Sort by wins, losses, abandoned games, or username. Default ranking is by wins.</p>
+        </div>
+        <div class="leaderboard-summary-card">
+          <span class="leaderboard-summary-label">Current Sort</span>
+          <strong>
+            <%= sortBy === 'abandoned_games' ? 'Abandoned Games' : sortBy.charAt(0).toUpperCase() + sortBy.slice(1).replace('_', ' ') %>
+            (<%= direction.toUpperCase() %>)
+          </strong>
+        </div>
+      </div>
+
+      <section class="leaderboard-card">
+        <div class="leaderboard-table-wrap">
+          <table class="leaderboard-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>
+                  <% const usernameDirection = sortBy === 'username' && direction === 'asc' ? 'desc' : 'asc'; %>
+                  <a href="/leaderboard?sort=username&direction=<%= usernameDirection %>">
+                    Player
+                    <% if (sortBy === 'username') { %>
+                      <span class="sort-indicator"><%= direction === 'asc' ? '?' : '?' %></span>
+                    <% } %>
+                  </a>
+                </th>
+                <th>
+                  <% const winsDirection = sortBy === 'wins' && direction === 'desc' ? 'asc' : 'desc'; %>
+                  <a href="/leaderboard?sort=wins&direction=<%= winsDirection %>">
+                    Wins
+                    <% if (sortBy === 'wins') { %>
+                      <span class="sort-indicator"><%= direction === 'asc' ? '?' : '?' %></span>
+                    <% } %>
+                  </a>
+                </th>
+                <th>
+                  <% const lossesDirection = sortBy === 'losses' && direction === 'desc' ? 'asc' : 'desc'; %>
+                  <a href="/leaderboard?sort=losses&direction=<%= lossesDirection %>">
+                    Losses
+                    <% if (sortBy === 'losses') { %>
+                      <span class="sort-indicator"><%= direction === 'asc' ? '?' : '?' %></span>
+                    <% } %>
+                  </a>
+                </th>
+                <th>
+                  <% const abandonedDirection = sortBy === 'abandoned_games' && direction === 'desc' ? 'asc' : 'desc'; %>
+                  <a href="/leaderboard?sort=abandoned_games&direction=<%= abandonedDirection %>">
+                    Abandoned
+                    <% if (sortBy === 'abandoned_games') { %>
+                      <span class="sort-indicator"><%= direction === 'asc' ? '?' : '?' %></span>
+                    <% } %>
+                  </a>
+                </th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (entries.length) { %>
+                <% entries.forEach(function(entry, index) { %>
+                  <tr>
+                    <td><strong>#<%= index + 1 %></strong></td>
+                    <td class="leaderboard-player"><%= entry.username %></td>
+                    <td><%= entry.wins %></td>
+                    <td><%= entry.losses %></td>
+                    <td><%= entry.abandoned_games %></td>
+                    <td><%= entry.wins + entry.losses + entry.abandoned_games %></td>
+                  </tr>
+                <% }); %>
+              <% } else { %>
+                <tr>
+                  <td colspan="6" class="leaderboard-empty">No registered players are on the leaderboard yet.</td>
+                </tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </div>
+</body>
+
+</html>

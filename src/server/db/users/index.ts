@@ -15,6 +15,16 @@ export type UserProfileStats = {
   abandoned_games: number;
 };
 
+export type LeaderboardSortField =
+  | "wins"
+  | "losses"
+  | "abandoned_games"
+  | "username";
+
+export type LeaderboardSortDirection = "asc" | "desc";
+
+export type LeaderboardEntry = UserProfileStats;
+
 let profileStatsColumnsSupported: boolean | null = null;
 
 const hasProfileStatsColumns = async () => {
@@ -85,12 +95,15 @@ const createGuest = async () => {
   throw new Error("Failed to create guest account");
 };
 
+const registeredUsersFilter = "user_password IS NOT NULL";
+
 const selectProfileStats = async (whereClause: string, value: string | number) => {
   if (await hasProfileStatsColumns()) {
     return db.oneOrNone<UserProfileStats>(
       `SELECT user_id, username, wins, losses, abandoned_games
        FROM users
-       WHERE ${whereClause}`,
+       WHERE ${whereClause}
+         AND ${registeredUsersFilter}`,
       [value],
     );
   }
@@ -101,7 +114,8 @@ const selectProfileStats = async (whereClause: string, value: string | number) =
             0::int AS losses,
             0::int AS abandoned_games
      FROM users
-     WHERE ${whereClause}`,
+     WHERE ${whereClause}
+       AND ${registeredUsersFilter}`,
     [value],
   );
 };
@@ -120,7 +134,11 @@ const incrementWins = async (userId: number) => {
   }
 
   await db.none(
-    `UPDATE users SET wins = wins + 1, updated_at = NOW() WHERE user_id = $1`,
+    `UPDATE users
+     SET wins = wins + 1,
+         updated_at = NOW()
+     WHERE user_id = $1
+       AND ${registeredUsersFilter}`,
     [userId],
   );
 };
@@ -134,7 +152,8 @@ const incrementLossesForUsers = async (userIds: number[]) => {
     `UPDATE users
      SET losses = losses + 1,
          updated_at = NOW()
-     WHERE user_id = ANY($1)`,
+     WHERE user_id = ANY($1)
+       AND ${registeredUsersFilter}`,
     [userIds],
   );
 };
@@ -148,8 +167,43 @@ const incrementAbandonedGames = async (userId: number) => {
     `UPDATE users
      SET abandoned_games = abandoned_games + 1,
          updated_at = NOW()
-     WHERE user_id = $1`,
+     WHERE user_id = $1
+       AND ${registeredUsersFilter}`,
     [userId],
+  );
+};
+
+const getLeaderboard = async (
+  sortBy: LeaderboardSortField = "wins",
+  direction: LeaderboardSortDirection = "desc",
+) => {
+  const sortColumnMap: Record<LeaderboardSortField, string> = {
+    wins: "wins",
+    losses: "losses",
+    abandoned_games: "abandoned_games",
+    username: "username",
+  };
+
+  const orderColumn = sortColumnMap[sortBy] ?? "wins";
+  const orderDirection = direction === "asc" ? "ASC" : "DESC";
+
+  if (await hasProfileStatsColumns()) {
+    return db.any<LeaderboardEntry>(
+      `SELECT user_id, username, wins, losses, abandoned_games
+       FROM users
+       WHERE ${registeredUsersFilter}
+       ORDER BY ${orderColumn} ${orderDirection}, username ASC`,
+    );
+  }
+
+  return db.any<LeaderboardEntry>(
+    `SELECT user_id, username,
+            0::int AS wins,
+            0::int AS losses,
+            0::int AS abandoned_games
+     FROM users
+     WHERE ${registeredUsersFilter}
+     ORDER BY ${orderColumn} ${orderDirection}, username ASC`,
   );
 };
 
@@ -162,4 +216,5 @@ export default {
   incrementWins,
   incrementLossesForUsers,
   incrementAbandonedGames,
+  getLeaderboard,
 };
