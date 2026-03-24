@@ -8,6 +8,13 @@ const messageContainer =
 const chatForm = document.querySelector<HTMLFormElement>("#chat form");
 const chatInput = document.querySelector<HTMLInputElement>("#chat input");
 
+const scrollChatToLatest = (behavior: ScrollBehavior = "smooth") => {
+  messageContainer?.scrollTo({
+    top: messageContainer.scrollHeight,
+    behavior,
+  });
+};
+
 const loadMessages = async () => {
   try {
     const roomId = getRoomId();
@@ -41,6 +48,8 @@ const loadMessages = async () => {
         messageContainer!.appendChild(container);
       },
     );
+
+    scrollChatToLatest("auto");
   } catch (error) {
     console.error("Error loading messages:", error);
   }
@@ -65,11 +74,7 @@ socket.on(
     )!.innerText = new Date(timestamp).toLocaleTimeString();
 
     messageContainer!.appendChild(container);
-
-    messageContainer?.scrollTo({
-      top: messageContainer.scrollHeight,
-      behavior: "smooth",
-    });
+    scrollChatToLatest();
   },
 );
 
