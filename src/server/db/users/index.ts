@@ -7,8 +7,15 @@ export type User = {
   user_password: string | null;
 };
 
+export type UserProfileStats = {
+  user_id: number;
+  username: string;
+  wins: number;
+  losses: number;
+  abandoned_games: number;
+};
+
 const register = async (username: string, password: string) => {
-  // Encrypt password
   const encryptedPassword = await bcrypt.hash(password, 10);
 
   const { user_id } = await db.one(
@@ -60,4 +67,52 @@ const createGuest = async () => {
   throw new Error("Failed to create guest account");
 };
 
-export default { register, login, createGuest };
+const getProfileStats = async (userId: number) => {
+  return db.oneOrNone<UserProfileStats>(
+    `SELECT user_id, username, wins, losses, abandoned_games
+     FROM users
+     WHERE user_id = $1`,
+    [userId],
+  );
+};
+
+const incrementWins = async (userId: number) => {
+  await db.none(
+    `UPDATE users SET wins = wins + 1, updated_at = NOW() WHERE user_id = $1`,
+    [userId],
+  );
+};
+
+const incrementLossesForUsers = async (userIds: number[]) => {
+  if (!userIds.length) {
+    return;
+  }
+
+  await db.none(
+    `UPDATE users
+     SET losses = losses + 1,
+         updated_at = NOW()
+     WHERE user_id = ANY($1)`,
+    [userIds],
+  );
+};
+
+const incrementAbandonedGames = async (userId: number) => {
+  await db.none(
+    `UPDATE users
+     SET abandoned_games = abandoned_games + 1,
+         updated_at = NOW()
+     WHERE user_id = $1`,
+    [userId],
+  );
+};
+
+export default {
+  register,
+  login,
+  createGuest,
+  getProfileStats,
+  incrementWins,
+  incrementLossesForUsers,
+  incrementAbandonedGames,
+};

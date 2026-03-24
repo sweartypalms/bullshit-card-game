@@ -2,7 +2,7 @@ import express from "express";
 import { Request, Response } from "express";
 import { saveChatMessage } from "../db/chat";
 
-import { Game } from "../db";
+import { Game, User } from "../db";
 import { getAvailableGames, getCurrentPlayer } from "../db/games";
 
 const router = express.Router();
@@ -150,10 +150,14 @@ router.post("/abandon/:gameId", async (request: Request, response: Response) => 
   const numericGameId = Number(gameId);
   const io = request.app.get("io");
   // @ts-ignore
+  const userId = request.session.user_id;
+  // @ts-ignore
   const username = request.session.username;
 
+  await User.incrementAbandonedGames(userId);
+
   io.to(gameId).emit("game:ended", {
-    message: username + " abandoned the game. The game has ended.",
+    message: `${username} abandoned the game. The game has ended.`,
     redirectTo: "/lobby",
   });
 
@@ -254,6 +258,10 @@ router.get("/:gameId", async (request: Request, response: Response) => {
   response.render("games", {
     gameId,
     username,
+    isGuest: Boolean(
+      // @ts-ignore
+      request.session.isGuest,
+    ),
     game_name: game_room_name,
     isHost,
     players,
@@ -340,6 +348,12 @@ router.post("/:gameId/play", async (req, res) => {
   const userCards = await Game.getUserCards(user_id, numericGameId);
   console.log("current players num cards: " + userCards.length);
   if (Number(userCards.length) === 0) {
+    const losingUserIds = players
+      .map((player) => player.user_id)
+      .filter((playerId) => playerId !== user_id);
+
+    await User.incrementWins(user_id);
+    await User.incrementLossesForUsers(losingUserIds);
     io.to(gameId).emit("game:winner", { winner: username });
     await Game.setGameFinished(numericGameId, user_id);
   }

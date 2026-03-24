@@ -45,6 +45,7 @@ app.use("/test", routes.test);
 app.use("/auth", routes.auth);
 app.use("/chat", middleware.auth, routes.chat);
 app.use("/lobby", middleware.auth, routes.lobby);
+app.use("/profile", middleware.auth, routes.profile);
 app.use("/games", middleware.auth, routes.games);
 
 app.use((_request, _response, next) => {

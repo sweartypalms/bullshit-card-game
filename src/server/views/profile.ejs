@@ -1,0 +1,83 @@
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title><%= username %>'s Profile</title>
+  <%- include('shared/head') %>
+</head>
+
+<body>
+  <div id="container">
+    <%- include('shared/menu') %>
+
+    <section class="profile-shell">
+      <div class="profile-hero">
+        <div>
+          <p class="profile-kicker">Player Profile</p>
+          <h1><%= username %></h1>
+          <p class="profile-subtitle">
+            <% if (isGuest) { %>
+              Guest stats are temporary. Register to keep these benefits long-term.
+            <% } else { %>
+              Your running record across completed and abandoned games.
+            <% } %>
+          </p>
+        </div>
+        <div class="profile-total-card">
+          <span class="profile-total-label">Tracked Games</span>
+          <strong><%= totalTrackedGames %></strong>
+        </div>
+      </div>
+
+      <div class="profile-grid">
+        <section class="profile-card stat-card wins">
+          <span class="stat-label">Wins</span>
+          <strong><%= stats.wins %></strong>
+        </section>
+        <section class="profile-card stat-card losses">
+          <span class="stat-label">Losses</span>
+          <strong><%= stats.losses %></strong>
+        </section>
+        <section class="profile-card stat-card abandoned">
+          <span class="stat-label">Abandoned Games</span>
+          <strong><%= stats.abandoned_games %></strong>
+        </section>
+      </div>
+
+      <section class="profile-card profile-chart-card">
+        <div class="chart-header">
+          <div>
+            <h2>Stats Chart</h2>
+            <p>Quick view of how your games break down.</p>
+          </div>
+        </div>
+
+        <% if (chartSegments.length) { %>
+          <div class="profile-chart-bar" aria-label="Profile stats chart">
+            <% chartSegments.forEach(function(segment) { %>
+              <span
+                class="chart-segment <%= segment.className %>"
+                style="width: <%= segment.percent %>%"
+                title="<%= segment.label %>: <%= segment.value %>">
+              </span>
+            <% }); %>
+          </div>
+
+          <ul class="chart-legend">
+            <% chartSegments.forEach(function(segment) { %>
+              <li>
+                <span class="legend-dot <%= segment.className %>"></span>
+                <span><%= segment.label %></span>
+                <strong><%= segment.value %></strong>
+              </li>
+            <% }); %>
+          </ul>
+        <% } else { %>
+          <p class="chart-empty">No tracked games yet. Play a few rounds and your chart will show up here.</p>
+        <% } %>
+      </section>
+    </section>
+  </div>
+</body>
+
+</html>
