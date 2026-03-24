@@ -17,3 +17,153 @@
   cursor: not-allowed;
   opacity: 0.6;
 }
+
+#my-cards {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+  padding: 12px 0 4px;
+  margin: 16px 0 20px;
+  list-style: none;
+}
+
+#my-cards li {
+  list-style: none;
+  flex: 0 0 auto;
+  width: 88px;
+}
+
+.card-option {
+  display: block;
+  position: relative;
+  width: 88px;
+  height: 124px;
+  cursor: pointer;
+}
+
+.card-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.card-face {
+  position: relative;
+  display: block;
+  width: 88px;
+  height: 124px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  border: 2px solid #d7dce5;
+  background: linear-gradient(180deg, #ffffff 0%, #f5f7fb 100%);
+  box-shadow: 0 10px 24px rgba(27, 39, 51, 0.16);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
+  user-select: none;
+}
+
+.card-option:hover .card-face {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 28px rgba(27, 39, 51, 0.2);
+}
+
+.card-option input:checked + .card-face {
+  border-color: #2f80ed;
+  box-shadow: 0 0 0 4px rgba(47, 128, 237, 0.18), 0 18px 32px rgba(47, 128, 237, 0.2);
+  transform: translateY(-8px);
+}
+
+.card-corner {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.card-corner.top {
+  top: 8px;
+  left: 8px;
+}
+
+.card-corner.bottom {
+  right: 8px;
+  bottom: 8px;
+  transform: rotate(180deg);
+}
+
+.card-rank {
+  font-size: 1.15rem;
+}
+
+.card-suit-small {
+  font-size: 0.95rem;
+  margin-top: 2px;
+}
+
+.card-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.4rem;
+}
+
+.card-red {
+  color: #d64545;
+}
+
+.card-black {
+  color: #1f2933;
+}
+
+#play-cards-btn {
+  min-width: 180px;
+}
+
+@media (min-width: 900px) {
+  #my-cards {
+    flex-wrap: nowrap;
+    gap: 0;
+    overflow-x: auto;
+    padding: 18px 8px 10px;
+  }
+
+  #my-cards li {
+    margin-left: -20px;
+    transition: transform 0.18s ease;
+  }
+
+  #my-cards li:first-child {
+    margin-left: 0;
+  }
+
+  #my-cards li:nth-child(odd) {
+    transform: translateY(8px) rotate(-3deg);
+  }
+
+  #my-cards li:nth-child(even) {
+    transform: translateY(0) rotate(2deg);
+  }
+
+  #my-cards li:hover {
+    z-index: 3;
+    transform: translateY(-10px) rotate(0deg);
+  }
+
+  #my-cards li:has(.card-checkbox:checked) {
+    z-index: 4;
+    transform: translateY(-14px) rotate(0deg);
+  }
+}
+
+@media (max-width: 899px) {
+  #my-cards {
+    justify-content: center;
+  }
+}
