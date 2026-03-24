@@ -154,10 +154,17 @@ router.post("/abandon/:gameId", async (request: Request, response: Response) => 
   // @ts-ignore
   const username = request.session.username;
 
-  await User.incrementAbandonedGames(userId);
+  const gameInfo = await Game.getGameInfo(numericGameId);
+  const gameStarted = Boolean(gameInfo?.game_started);
+
+  if (gameStarted) {
+    await User.incrementAbandonedGames(userId);
+  }
 
   io.to(gameId).emit("game:ended", {
-    message: `${username} abandoned the game. The game has ended.`,
+    message: gameStarted
+      ? `${username} abandoned the game. The game has ended.`
+      : `${username} closed the lobby before the game started.`,
     redirectTo: "/lobby",
   });
 
@@ -368,6 +375,12 @@ router.get("/:gameId/start-test", async (req, res) => {
   const numericGameId = Number(gameId);
 
   try {
+    const existingGameInfo = await Game.getGameInfo(numericGameId);
+    if (existingGameInfo?.game_started) {
+      res.status(409).json({ success: false, error: "Game has already started." });
+      return;
+    }
+
     await Game.start(numericGameId);
     // @ts-ignore
     await Game.touchUser(req.session.user_id);

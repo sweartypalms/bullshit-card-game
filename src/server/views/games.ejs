@@ -161,18 +161,23 @@
       const startBtn = document.getElementById("start-btn");
       if (startBtn) {
         startBtn.addEventListener("click", function () {
+          startBtn.setAttribute("disabled", "disabled");
           fetch(`/games/<%= gameId %>/start-test`, {
             method: "GET"
           })
-            .then(res => res.json())
-            .then(data => {
-              if (data.success) {
-                alert("Game started!");
+            .then(res => res.json().then(data => ({ ok: res.ok, data })))
+            .then(({ ok, data }) => {
+              if (ok && data.success) {
+                startBtn.remove();
               } else {
+                startBtn.removeAttribute("disabled");
                 alert("Failed to start game: " + (data.error || "Unknown error"));
               }
             })
-            .catch(() => alert("Failed to start game."));
+            .catch(() => {
+              startBtn.removeAttribute("disabled");
+              alert("Failed to start game.");
+            });
         });
       }
     });
