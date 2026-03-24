@@ -99,8 +99,11 @@
 
             </div>
   </div>
-  <div id="game-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); color:white; font-size:2em; justify-content:center; align-items:center; z-index:1000;">
-  <span id="winner-message"></span>
+  <div id="game-overlay" class="game-overlay" style="display:none;">
+  <div class="game-overlay-card">
+    <span id="winner-message"></span>
+    <button id="exit-game-btn" type="button">Exit Game</button>
+  </div>
 </div>
 </body>
 

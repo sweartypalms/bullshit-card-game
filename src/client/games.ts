@@ -13,6 +13,22 @@ let lastPlayedUserName: string | null = null;
 
 socket.emit("joinRoom", roomId);
 
+function showGameOverlay(message: string) {
+  const winnerMessageElem = document.getElementById("winner-message");
+  if (winnerMessageElem) {
+    winnerMessageElem.textContent = message;
+  }
+
+  const gameOverlayElem = document.getElementById("game-overlay");
+  if (gameOverlayElem) {
+    gameOverlayElem.style.display = "flex";
+  }
+
+  document
+    .querySelectorAll("#play-cards-btn, #bs-btn, #start-btn")
+    .forEach((btn) => ((btn as HTMLButtonElement).disabled = true));
+}
+
 socket.on("game:update", (data) => {
   currentPlayerName = data.currentPlayer?.username ?? null;
   lastPlayedUserName = data.lastPlayedUser ?? null;
@@ -28,23 +44,12 @@ socket.on("game:update", (data) => {
   updateTurnActions();
 });
 
-socket.on("game:ended", ({ message, redirectTo }) => {
-  alert(message || "The game has ended.");
-  window.location.href = redirectTo || "/lobby";
+socket.on("game:ended", ({ message }) => {
+  showGameOverlay(message || "The game has ended.");
 });
 
 socket.on("game:winner", ({ winner }) => {
-  const winnerMessageElem = document.getElementById("winner-message");
-  if (winnerMessageElem) {
-    winnerMessageElem.textContent = `${winner} has won the game!`;
-  }
-  const gameOverlayElem = document.getElementById("game-overlay");
-  if (gameOverlayElem) {
-    gameOverlayElem.style.display = "flex";
-  }
-  document
-    .querySelectorAll("#play-cards-btn, #bs-btn")
-    .forEach((btn) => ((btn as HTMLButtonElement).disabled = true));
+  showGameOverlay(`${winner} has won the game!`);
 });
 
 socket.on("game:currentCard", function (data) {
@@ -228,6 +233,13 @@ function bindCardSelection() {
 
       updateTurnActions();
     });
+  });
+}
+
+const exitGameButton = document.getElementById("exit-game-btn");
+if (exitGameButton) {
+  exitGameButton.addEventListener("click", () => {
+    window.location.href = "/lobby";
   });
 }
 
