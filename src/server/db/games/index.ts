@@ -1,7 +1,6 @@
 import db from "../connection";
 import {
   ADD_PLAYER,
-  AVAILABLE_CARD_COUNT,
   CONDITIONALLY_JOIN_SQL,
   CREATE_DECK_SQL,
   CREATE_GAME_CARD_PILE_WITH_ID_SQL,
@@ -16,13 +15,10 @@ export const create = async (
   password: string,
   host_id: number,
 ) => {
-  // 1. Create deck
   const { deck_id } = await db.one<{ deck_id: number }>(CREATE_DECK_SQL);
 
-  // 2. Create game_card_pile with the same id as deck_id
   await db.one(CREATE_GAME_CARD_PILE_WITH_ID_SQL, [deck_id]);
 
-  // 3. Create game_room using the same id for both deck and pile
   const { game_room_id } = await db.one<{ game_room_id: number }>(
     CREATE_GAME_ROOM_SQL,
     [
@@ -58,14 +54,12 @@ export const join = async (
   );
 
   if (!result) {
-    // Handle join failure (e.g., wrong password or other condition)
     const err = new Error("Join failed");
     // @ts-ignore
     err.code = "JOIN_FAILED";
     throw err;
   }
 
-  // Update last_updated column for this user
   await db.none(`UPDATE users SET updated_at = NOW() WHERE user_id = $1`, [
     userId,
   ]);
@@ -95,28 +89,23 @@ export const getAvailableGames = async () => {
 };
 
 export const isHost = async (user_id: number, gameId: number) => {
-  // Adjust column names as needed
-  const { host_id } = await db.one(
+  const { game_room_host_user_id } = await db.one(
     "SELECT game_room_host_user_id FROM game_room WHERE game_room_id = $1",
     [gameId],
   );
-  return host_id === user_id;
+  return game_room_host_user_id === user_id;
 };
 
 export const deleteGame = async (gameId: number) => {
-  // Remove all users from the game
   await db.none(
     "UPDATE users SET game_room_id = NULL WHERE game_room_id = $1",
     [gameId],
   );
-  // Delete all cards associated with this game's deck
   await db.none(`DELETE FROM card WHERE deck_deck_id = $1`, [gameId]);
-  // Delete the game room
   await db.none("DELETE FROM game_room WHERE game_room_id = $1", [gameId]);
 };
 
 export const leaveGame = async (user_id: number, gameId: number) => {
-  // Delete game_room_id from user to leave game
   await db.none(
     "UPDATE users SET game_room_id = NULL WHERE user_id = $1 AND game_room_id = $2",
     [user_id, gameId],
@@ -179,11 +168,11 @@ export const getCurrentPlayer = async (gameId: number) => {
   );
 };
 
-// In your db/games/index.ts
 export const getUserById = async (userId: number) => {
-  return db.oneOrNone("SELECT game_room_id FROM users WHERE user_id = $1", [
-    userId,
-  ]);
+  return db.oneOrNone(
+    "SELECT user_id, username, game_room_id FROM users WHERE user_id = $1",
+    [userId],
+  );
 };
 
 export const setFirstPlayer = async (gameId: number, userId: number) => {
@@ -201,13 +190,11 @@ export const getUserCards = async (userId: number, gameId: number) => {
 };
 
 export const start = async (gameId: number) => {
-  // Prevent double dealing
   const { count } = await db.one(
     `SELECT COUNT(*)::int AS count FROM card WHERE deck_deck_id = $1`,
     [gameId],
   );
   if (count >= 52) {
-    // Cards already dealt, skip dealing
     return;
   }
 
@@ -238,15 +225,12 @@ export async function getSupposedRank(gameId: number) {
   );
 }
 
-// Deal the cards
 export const dealCards = async (gameId: number) => {
-  // 1. Get all unassigned cards for this game
   const available_cards = await db.any(
     `SELECT card_rank FROM card WHERE deck_deck_id = $1 AND user_user_id = 0 AND game_card_pile_game_card_pile_id = 0`,
     [gameId],
   );
 
-  // 2. Shuffle the cards
   function shuffle<T>(array: T[]): T[] {
     for (let i = array.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -256,13 +240,11 @@ export const dealCards = async (gameId: number) => {
   }
   const shuffledCards = shuffle(available_cards.map((c) => c.card_rank));
 
-  // 3. Get all players in the game
   const players = await db.any(
     `SELECT user_id FROM users WHERE game_room_id = $1`,
     [gameId],
   );
 
-  // 4. Deal cards round-robin
   const queries = [];
   for (let i = 0; i < shuffledCards.length; i++) {
     const user_id = players[i % players.length].user_id;
@@ -282,7 +264,6 @@ export async function moveCardsToPile(
   game_card_pile_game_card_pile_id: number,
 ) {
   if (!cardRanks || cardRanks.length === 0) {
-    // Nothing to move, just return
     return;
   }
   await db.none(
@@ -300,7 +281,6 @@ export async function setCurrentPlayerTurn(gameId: number, userId: number) {
   );
 }
 
-// Get specific fields from game_room
 export const getGameRoomFields = async (gameId: number, fields: string[]) => {
   const fieldList = fields.join(", ");
   return db.one(`SELECT ${fieldList} FROM game_room WHERE game_room_id = $1`, [
@@ -308,7 +288,6 @@ export const getGameRoomFields = async (gameId: number, fields: string[]) => {
   ]);
 };
 
-// Get all cards in the pile
 export const getPileCards = async (pileId: number) => {
   return db
     .any(
@@ -318,7 +297,6 @@ export const getPileCards = async (pileId: number) => {
     .then((cards) => cards.map((c) => Number(c.card_rank)));
 };
 
-// Give cards to a user
 export const giveCardsToUser = async (userId: number, cardRanks: number[]) => {
   if (cardRanks.length === 0) return;
   return db.none(

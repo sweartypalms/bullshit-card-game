@@ -1,17 +1,20 @@
 import { socket } from "./socket";
 
-// Get the roomId from the template or URL
+type Card = {
+  card_rank: number;
+};
+
 const roomId =
   (window as any).gameId || window.location.pathname.split("/").pop();
+const currentUsername = document.body.dataset.username ?? "";
 
-// Join the Socket.io room for this game
 socket.emit("joinRoom", roomId);
 
-// Listen for real-time game state updates from the server
 socket.on("game:update", (data) => {
-  // Update the UI with the new game state
-  updateGameInfo(data.gameInfo, data.players ?? []);
+  updateGameInfo(data.gameInfo, data.players ?? [], data.currentPlayer?.username ?? null);
   updatePlayersList(data.players ?? []);
+  updateUserCards(data.userCards ?? []);
+  updateTurnActions(data.currentPlayer?.username ?? null, data.lastPlayedUser ?? null);
 });
 
 socket.on("game:winner", ({ winner }) => {
@@ -46,18 +49,18 @@ socket.on("game:supposedRank", function (data) {
   ];
   const h3 = document.getElementById("supposed-card");
   if (h3) {
-    // Map card_rank (1-52) to rank index (0-12)
     const rankIndex = Math.floor((data.supposedRank - 1) / 4);
     h3.innerHTML = "Supposed Card: " + ranks[rankIndex];
   }
 });
 
-function updateGameInfo(gameInfo: any, players: any[]) {
-  // Update game info in the DOM as needed
+function updateGameInfo(gameInfo: any, players: any[], currentPlayerName: string | null) {
   const minPlayers = document.getElementById("min-players");
   const maxPlayers = document.getElementById("max-players");
+  const currentPlayerLabel = document.getElementById("current-player-name");
   if (minPlayers) minPlayers.textContent = String(gameInfo.min_players);
   if (maxPlayers) maxPlayers.textContent = String(gameInfo.max_players);
+  if (currentPlayerLabel) currentPlayerLabel.textContent = currentPlayerName ?? "Waiting...";
 
   const startButton = document.getElementById("start-btn") as HTMLButtonElement | null;
   if (startButton) {
@@ -70,7 +73,6 @@ function updateGameInfo(gameInfo: any, players: any[]) {
   }
 }
 
-// Add this function to update the players list in the UI
 function updatePlayersList(players: any[]) {
   const playersContainer = document.getElementById("players-list");
   const playerCount = document.getElementById("player-count");
@@ -89,3 +91,88 @@ function updatePlayersList(players: any[]) {
     playerCount.textContent = `${players.length}/${maxPlayers.textContent ?? "?"}`;
   }
 }
+
+function updateUserCards(cards: Card[]) {
+  const cardList = document.getElementById("my-cards");
+  if (!cardList) {
+    return;
+  }
+
+  const sortedCards = [...cards].sort((a, b) => {
+    const rankDiff = Math.floor((a.card_rank - 1) / 4) - Math.floor((b.card_rank - 1) / 4);
+    if (rankDiff !== 0) {
+      return rankDiff;
+    }
+    return ((a.card_rank - 1) % 4) - ((b.card_rank - 1) % 4);
+  });
+
+  const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+  const suits = ["s", "c", "d", "h"];
+
+  cardList.innerHTML = sortedCards
+    .map((card) => {
+      const zeroBased = card.card_rank - 1;
+      const cardName = `${ranks[Math.floor(zeroBased / 4)]}${suits[zeroBased % 4]}`;
+      return `
+        <li>
+          <label>
+            <input type="checkbox" name="selectedCards" value="${card.card_rank}" class="card-checkbox" />
+            ${cardName} (${card.card_rank})
+          </label>
+        </li>
+      `;
+    })
+    .join("");
+
+  bindCardSelection();
+}
+
+function updateTurnActions(currentPlayerName: string | null, lastPlayedUser: string | null) {
+  const playButton = document.getElementById("play-cards-btn") as HTMLButtonElement | null;
+  const bsButton = document.getElementById("bs-btn") as HTMLButtonElement | null;
+  const turnNotice = document.getElementById("turn-notice");
+  const selectedCards = document.querySelectorAll('.card-checkbox:checked').length;
+  const isCurrentPlayer = currentPlayerName === currentUsername;
+
+  if (playButton) {
+    playButton.disabled = !isCurrentPlayer || selectedCards === 0 || selectedCards > 4;
+  }
+
+  if (bsButton) {
+    const canCallBs = currentUsername !== lastPlayedUser;
+    bsButton.disabled = !canCallBs;
+    bsButton.style.backgroundColor = canCallBs ? "#e74c3c" : "#ccc";
+  }
+
+  if (turnNotice) {
+    turnNotice.textContent = isCurrentPlayer
+      ? "It's your turn."
+      : `It's ${currentPlayerName ?? "another player's"} turn.`;
+  }
+}
+
+function bindCardSelection() {
+  const checkboxes = document.querySelectorAll('.card-checkbox');
+  const playBtn = document.getElementById('play-cards-btn') as HTMLButtonElement | null;
+
+  checkboxes.forEach((cb) => {
+    cb.addEventListener('change', () => {
+      const checked = document.querySelectorAll('.card-checkbox:checked');
+      if (checked.length > 4) {
+        (cb as HTMLInputElement).checked = false;
+        alert("You can only select up to 4 cards.");
+      }
+
+      updateTurnActions(
+        document.getElementById("current-player-name")?.textContent ?? null,
+        null,
+      );
+
+      if (playBtn) {
+        playBtn.disabled = checked.length === 0 || checked.length > 4 || document.getElementById("turn-notice")?.textContent !== "It's your turn.";
+      }
+    });
+  });
+}
+
+bindCardSelection();

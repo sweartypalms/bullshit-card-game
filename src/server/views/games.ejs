@@ -7,7 +7,7 @@
     <script src="/socket.io/socket.io.js"></script>
 </head>
 
-<body>
+<body data-username="<%= username %>">
   <div id="container">
     <%- include('shared/menu') %>
       <h1>
@@ -29,7 +29,7 @@
         </div>
 
         <h2 style="color:#2c3e50;">
-          Current Turn: <%= currentPlayer %>
+          Current Turn: <span id="current-player-name"><%= currentPlayer %></span>
         </h2>
         <% if (isHost) { %>
           <button id="start-btn" class="start-btn" style="background-color: <%= players.length >= min_players ? '#2ecc71' : '#e74c3c' %>; color: white;" <% if (players.length < min_players) { %>
@@ -82,9 +82,7 @@
                     >
                     Play Selected Cards
                 </button>
-                <% if (username !==currentPlayer) { %>
-                  <div style="color: #888; font-size: 0.9em;">It's <%= currentPlayer %>'s turn.</div>
-                  <% } %>
+                <div id="turn-notice" style="color: #888; font-size: 0.9em;"><% if (username===currentPlayer) { %>It's your turn.<% } else { %>It's <%= currentPlayer %>'s turn.<% } %></div>
                     <h3 id="supposed-card">
                       Supposed Card:
                       <%= ["A", "2" , "3" , "4" , "5" , "6" , "7" , "8" , "9" , "10" , "J" , "Q" , "K"
@@ -98,8 +96,6 @@
 </div>
 </body>
 
-
-
 <div id="chat-window">
   <ul id="chat-messages"></ul>
   <form id="chat-form">
@@ -112,21 +108,12 @@
   const socket = io();
   socket.emit("joinRoom", roomId);
 
-  // Listen for game state updates
-socket.on("game:update", (state) => {
-  // Update the UI with the new state
-  // For example, re-render player list, cards, turn info, etc.
-  updateGameUI(state);
-});
-
-  // Listen for new messages
   socket.on(`chat:message:${roomId}`, function (data) {
     const li = document.createElement("li");
     li.textContent = `[${new Date(data.timestamp).toLocaleTimeString()}] ${data.sender.username}: ${data.message}`;
     document.getElementById("chat-messages").appendChild(li);
   });
 
-  // Send message
   document.getElementById("chat-form").addEventListener("submit", function (e) {
     e.preventDefault();
     const input = document.getElementById("chat-input");
@@ -138,7 +125,6 @@ socket.on("game:update", (state) => {
     input.value = "";
   });
 
-  // Optionally, load previous messages
   fetch(`/chat/${roomId}/messages`)
     .then(res => res.json())
     .then(messages => {
@@ -149,38 +135,17 @@ socket.on("game:update", (state) => {
       });
     });
 
-  // Limit selection to 4 cards
-  const checkboxes = document.querySelectorAll('.card-checkbox');
-  const playBtn = document.getElementById('play-cards-btn');
-
-  checkboxes.forEach(cb => {
-    cb.addEventListener('change', () => {
-      const checked = document.querySelectorAll('.card-checkbox:checked');
-      playBtn.disabled = checked.length === 0 || checked.length > 4;
-      // Prevent selecting more than 4
-      if (checked.length > 4) {
-        cb.checked = false;
-        playBtn.disabled = true;
-        alert("You can only select up to 4 cards.");
-      }
-    });
-  });
-
-  // Handle play button click
-  playBtn.addEventListener('click', () => {
+  document.getElementById('play-cards-btn').addEventListener('click', () => {
     const selected = Array.from(document.querySelectorAll('.card-checkbox:checked'))
       .map(cb => Number(cb.value));
-
-    const gameCardPileId = roomId;
 
     fetch(`/games/<%= gameId %>/play`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cards: selected, pileId: gameCardPileId }),
+      body: JSON.stringify({ cards: selected, pileId: roomId }),
     }).then(res => {
       if (res.ok) {
-        checkboxes.forEach(cb => cb.checked = false);
-        playBtn.disabled = true;
+        document.querySelectorAll('.card-checkbox').forEach(cb => cb.checked = false);
       }
     });
   });
@@ -216,8 +181,6 @@ socket.on("game:update", (state) => {
     }
   });
 </script>
-
-
 
 <script src="/js/game.js"></script>
 
