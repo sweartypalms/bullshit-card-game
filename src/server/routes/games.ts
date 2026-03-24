@@ -155,7 +155,28 @@ router.post("/abandon/:gameId", async (request: Request, response: Response) => 
   const username = request.session.username;
 
   const gameInfo = await Game.getGameInfo(numericGameId);
-  const gameStarted = Boolean(gameInfo?.game_started);
+  if (!gameInfo) {
+    return response.status(404).json({ error: "Game not found." });
+  }
+
+  const gameStarted = Boolean(gameInfo.game_started);
+  const isHost = userId === gameInfo.game_room_host_user_id;
+
+  if (!gameStarted && !isHost) {
+    await Game.leaveGame(userId, numericGameId);
+
+    const serverMsg = `${username} left the lobby before the game started.`;
+    io.to(gameId).emit(`chat:message:${gameId}`, {
+      sender: { username: "Server" },
+      message: serverMsg,
+      timestamp: Date.now(),
+    });
+    await saveChatMessage(numericGameId, "Server", serverMsg);
+    await emitGameState(request, numericGameId);
+    await emitLobbyGames(request);
+
+    return response.status(200).json({ redirectTo: "/lobby" });
+  }
 
   if (gameStarted) {
     await User.incrementAbandonedGames(userId);
@@ -173,7 +194,6 @@ router.post("/abandon/:gameId", async (request: Request, response: Response) => 
 
   response.status(204).end();
 });
-
 router.post("/leave/:gameId", async (request: Request, response: Response) => {
   const { gameId } = request.params;
   const numericGameId = Number(gameId);
