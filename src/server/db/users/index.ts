@@ -85,13 +85,13 @@ const createGuest = async () => {
   throw new Error("Failed to create guest account");
 };
 
-const getProfileStats = async (userId: number) => {
+const selectProfileStats = async (whereClause: string, value: string | number) => {
   if (await hasProfileStatsColumns()) {
     return db.oneOrNone<UserProfileStats>(
       `SELECT user_id, username, wins, losses, abandoned_games
        FROM users
-       WHERE user_id = $1`,
-      [userId],
+       WHERE ${whereClause}`,
+      [value],
     );
   }
 
@@ -101,9 +101,17 @@ const getProfileStats = async (userId: number) => {
             0::int AS losses,
             0::int AS abandoned_games
      FROM users
-     WHERE user_id = $1`,
-    [userId],
+     WHERE ${whereClause}`,
+    [value],
   );
+};
+
+const getProfileStats = async (userId: number) => {
+  return selectProfileStats("user_id = $1", userId);
+};
+
+const getProfileStatsByUsername = async (username: string) => {
+  return selectProfileStats("username = $1", username);
 };
 
 const incrementWins = async (userId: number) => {
@@ -150,6 +158,7 @@ export default {
   login,
   createGuest,
   getProfileStats,
+  getProfileStatsByUsername,
   incrementWins,
   incrementLossesForUsers,
   incrementAbandonedGames,

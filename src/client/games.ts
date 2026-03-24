@@ -37,7 +37,15 @@ function showGameOverlay(message: string) {
     .forEach((btn) => ((btn as HTMLButtonElement).disabled = true));
 }
 
-function appendChatMessage(text: string) {
+function openProfilePopup(username: string) {
+  window.open(
+    `/profile/${encodeURIComponent(username)}?popup=1`,
+    `profile-${username}`,
+    "popup=yes,width=560,height=720,resizable=yes,scrollbars=yes",
+  );
+}
+
+function appendChatMessage(username: string, text: string, timestamp: string | Date) {
   const chatMessages = document.getElementById("chat-messages");
   if (!chatMessages) {
     return;
@@ -45,7 +53,22 @@ function appendChatMessage(text: string) {
 
   const li = document.createElement("li");
   li.className = "chat-message-item";
-  li.textContent = text;
+
+  const timeLabel = `[${new Date(timestamp).toLocaleTimeString()}] `;
+  li.append(timeLabel);
+
+  if (username && username !== "Server" && username !== "Unknown") {
+    const profileButton = document.createElement("button");
+    profileButton.type = "button";
+    profileButton.className = "chat-username-button";
+    profileButton.textContent = username;
+    profileButton.addEventListener("click", () => openProfilePopup(username));
+    li.appendChild(profileButton);
+    li.append(`: ${text}`);
+  } else {
+    li.append(`${username}: ${text}`);
+  }
+
   chatMessages.appendChild(li);
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
@@ -60,7 +83,9 @@ async function loadChatHistory() {
     const messages: ChatMessage[] = await response.json();
     messages.forEach((msg) => {
       appendChatMessage(
-        `[${new Date(msg.timestamp ?? "").toLocaleTimeString()}] ${msg.username}: ${msg.message_content}`,
+        msg.username ?? "Unknown",
+        msg.message_content ?? "",
+        msg.timestamp ?? "",
       );
     });
   } catch (_error) {
@@ -122,7 +147,9 @@ socket.on("game:currentCard", function (data) {
 
 socket.on(`chat:message:${roomId}`, (data: ChatMessage) => {
   appendChatMessage(
-    `[${new Date(data.timestamp ?? "").toLocaleTimeString()}] ${data.sender?.username ?? "Unknown"}: ${data.message ?? ""}`,
+    data.sender?.username ?? "Unknown",
+    data.message ?? "",
+    data.timestamp ?? "",
   );
 });
 

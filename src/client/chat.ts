@@ -15,11 +15,48 @@ const scrollChatToLatest = (behavior: ScrollBehavior = "smooth") => {
   });
 };
 
+const openProfilePopup = (username: string) => {
+  window.open(
+    `/profile/${encodeURIComponent(username)}?popup=1`,
+    `profile-${username}`,
+    "popup=yes,width=560,height=720,resizable=yes,scrollbars=yes",
+  );
+};
+
+const renderChatMessage = (
+  container: HTMLDivElement,
+  username: string,
+  message: string,
+  timestamp: string,
+) => {
+  const textRow = container.querySelector<HTMLSpanElement>("div span:first-of-type");
+  const timeRow = container.querySelector<HTMLSpanElement>("div span:last-of-type");
+
+  if (!textRow || !timeRow) {
+    return;
+  }
+
+  textRow.textContent = "";
+
+  if (username && username !== "Server" && username !== "Unknown") {
+    const profileButton = document.createElement("button");
+    profileButton.type = "button";
+    profileButton.className = "chat-username-button";
+    profileButton.textContent = username;
+    profileButton.addEventListener("click", () => openProfilePopup(username));
+    textRow.appendChild(profileButton);
+    textRow.append(`: ${message}`);
+  } else {
+    textRow.innerText = `${username}: ${message}`;
+  }
+
+  timeRow.innerText = new Date(timestamp).toLocaleTimeString();
+};
+
 const loadMessages = async () => {
   try {
     const roomId = getRoomId();
 
-    // Join socket room for this game
     socket.emit("joinRoom", roomId);
     const response = await fetch(`/chat/${roomId}/messages`);
     const messages = await response.json();
@@ -38,13 +75,7 @@ const loadMessages = async () => {
           "#chat-message-template",
         );
 
-        container.querySelector<HTMLSpanElement>(
-          "div span:first-of-type",
-        )!.innerText = `${username}: ${message_content}`;
-        container.querySelector<HTMLSpanElement>(
-          "div span:last-of-type",
-        )!.innerText = new Date(timestamp).toLocaleTimeString();
-
+        renderChatMessage(container, username, message_content, timestamp);
         messageContainer!.appendChild(container);
       },
     );
@@ -55,23 +86,21 @@ const loadMessages = async () => {
   }
 };
 
-// Call `loadMessages` when the page loads
 document.addEventListener("DOMContentLoaded", () => {
   loadMessages();
 });
 
-// Listen for messages for specific room
 socket.on(
   `chat:message:${getRoomId()}`,
   ({ message, sender, timestamp }: ChatMessage) => {
     const container = cloneTemplate<HTMLDivElement>("#chat-message-template");
 
-    container.querySelector<HTMLSpanElement>(
-      "div span:first-of-type",
-    )!.innerText = `${sender.username}: ${message}`;
-    container.querySelector<HTMLSpanElement>(
-      "div span:last-of-type",
-    )!.innerText = new Date(timestamp).toLocaleTimeString();
+    renderChatMessage(
+      container,
+      sender.username,
+      message,
+      String(timestamp),
+    );
 
     messageContainer!.appendChild(container);
     scrollChatToLatest();
@@ -82,8 +111,6 @@ chatForm?.addEventListener("submit", (event) => {
   event.preventDefault();
 
   const message = chatInput?.value;
-  const roomId = getRoomId();
-  const username = document.querySelector<HTMLInputElement>("username")?.value;
 
   if (!message) {
     return;

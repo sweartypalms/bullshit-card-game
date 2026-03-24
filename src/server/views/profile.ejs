@@ -2,24 +2,28 @@
 
 <head>
   <meta charset="UTF-8" />
-  <title><%= username %>'s Profile</title>
+  <title><%= profileUsername %>'s Profile</title>
   <%- include('shared/head') %>
 </head>
 
-<body>
-  <div id="container">
-    <%- include('shared/menu') %>
+<body class="<%= isPopup ? 'profile-popup-body' : '' %>">
+  <div id="container" class="<%= isPopup ? 'profile-popup-container' : '' %>">
+    <% if (!isPopup) { %>
+      <%- include('shared/menu') %>
+    <% } %>
 
-    <section class="profile-shell">
+    <section class="profile-shell <%= isPopup ? 'profile-shell-popup' : '' %>">
       <div class="profile-hero">
         <div>
-          <p class="profile-kicker">Player Profile</p>
-          <h1><%= username %></h1>
+          <p class="profile-kicker"><%= isPopup ? 'Quick Profile' : 'Player Profile' %></p>
+          <h1><%= profileUsername %></h1>
           <p class="profile-subtitle">
-            <% if (isGuest) { %>
+            <% if (typeof notFound !== 'undefined' && notFound) { %>
+              We couldn't find a profile for this player.
+            <% } else if (isGuest && !isPopup) { %>
               Guest stats are temporary. Register to keep these benefits long-term.
             <% } else { %>
-              Your running record across completed and abandoned games.
+              <%= isPopup ? 'A quick look at this player\'s record.' : 'Your running record across completed and abandoned games.' %>
             <% } %>
           </p>
         </div>
@@ -48,7 +52,7 @@
         <div class="chart-header">
           <div>
             <h2>Stats Chart</h2>
-            <p>Quick view of how your games break down.</p>
+            <p>Quick view of how this player's games break down.</p>
           </div>
         </div>
 
@@ -73,7 +77,7 @@
             <% }); %>
           </ul>
         <% } else { %>
-          <p class="chart-empty">No tracked games yet. Play a few rounds and your chart will show up here.</p>
+          <p class="chart-empty">No tracked games yet. Once this player completes games, their chart will appear here.</p>
         <% } %>
       </section>
     </section>

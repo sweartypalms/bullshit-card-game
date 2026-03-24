@@ -1,7 +1,20 @@
+.profile-popup-body {
+  background: linear-gradient(180deg, #ffe8f1 0%, #ffd7e6 100%);
+}
+
+.profile-popup-container {
+  max-width: none;
+}
+
 .profile-shell {
   max-width: 1080px;
   margin: 0 auto;
   padding: 28px 0 40px;
+}
+
+.profile-shell-popup {
+  max-width: 100%;
+  padding: 20px 0 10px;
 }
 
 .profile-hero {
