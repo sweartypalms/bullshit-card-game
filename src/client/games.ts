@@ -350,20 +350,29 @@ if (exitGameButton) {
 
 const abandonGameButton = document.getElementById("abandon-game-btn");
 if (abandonGameButton) {
-  abandonGameButton.addEventListener("click", () => {
+  abandonGameButton.addEventListener("click", async () => {
     const confirmed = window.confirm("Are you sure you want to abandon this game?");
     if (!confirmed) {
       return;
     }
 
-    fetch("/games/abandon/" + roomId, {
+    const response = await fetch("/games/abandon/" + roomId, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-    }).then((response) => {
-      if (!response.ok) {
-        alert("Could not abandon the game. Please try again.");
-      }
     });
+
+    if (!response.ok) {
+      alert("Could not abandon the game. Please try again.");
+      return;
+    }
+
+    const contentType = response.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      const payload = await response.json();
+      if (payload.redirectTo) {
+        window.location.href = payload.redirectTo;
+      }
+    }
   });
 }
 
