@@ -9,6 +9,12 @@
     <% } else { %>
       <li><a class="button-link" href="/lobby">Lobby</a></li>
     <% } %>
-    <li><a class="button-link" href="/auth/logout">Logout</a></li>
+    <% if (isGuest) { %>
+      <li><a class="button-link" href="/auth/register">Register</a></li>
+      <li><a class="button-link" href="/auth/login">Login</a></li>
+      <li><a class="button-link" href="/auth/logout">Exit Guest</a></li>
+    <% } else { %>
+      <li><a class="button-link" href="/auth/logout">Logout</a></li>
+    <% } %>
    </ul> 
 </menu>

@@ -1,6 +1,5 @@
 import express from "express";
 import { Request, Response } from "express";
-import bcrypt from "bcrypt";
 import db from "../db/connection"; // Import your database connection
 import { Game } from "../db";
 
@@ -10,7 +9,7 @@ const router = express.Router();
 
 // Register
 router.get("/register", async (_request: Request, response: Response) => {
-  response.render("auth/register");
+  response.render("auth/register", { error: null });
 });
 
 router.post("/register", async (request: Request, response: Response) => {
@@ -24,6 +23,8 @@ router.post("/register", async (request: Request, response: Response) => {
     request.session.user_id = user_id; // store userId in session
     // @ts-ignore
     request.session.username = username;
+    // @ts-ignore
+    request.session.isGuest = false;
 
     // Redirect to lobby after successful registration
     response.redirect("/lobby");
@@ -40,6 +41,24 @@ router.get("/login", async (_request: Request, response: Response) => {
   response.render("auth/login", { error: null });
 });
 
+router.post("/guest", async (request: Request, response: Response) => {
+  try {
+    const guest = await User.createGuest();
+
+    // @ts-ignore
+    request.session.user_id = guest.user_id;
+    // @ts-ignore
+    request.session.username = guest.username;
+    // @ts-ignore
+    request.session.isGuest = true;
+
+    response.redirect("/lobby");
+  } catch (error) {
+    console.error("Guest login error: ", error);
+    response.redirect("/?warning=Could%20not%20start%20guest%20session");
+  }
+});
+
 router.post("/login", async (request: Request, response: Response) => {
   const { username, password } = request.body;
 
@@ -50,6 +69,8 @@ router.post("/login", async (request: Request, response: Response) => {
     request.session.user_id = user_id; // store userId in session
     // @ts-ignore
     request.session.username = username;
+    // @ts-ignore
+    request.session.isGuest = false;
     // @ts-ignore
     const user = await db.oneOrNone(
       "SELECT game_room_id FROM users WHERE user_id = $1",

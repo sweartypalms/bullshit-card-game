@@ -16,6 +16,11 @@
 
 
             <h1> Welcome, <%= username %>, to the BS Lobby!</h1>
+            <% if (isGuest) { %>
+                <p style="text-align: center; margin-bottom: 16px;">
+                    You are playing as a guest. <a class="button-link" href="/auth/register">Register</a> to save stats and access member benefits.
+                </p>
+            <% } %>
             <br>
 
             <div id="content">

@@ -20,8 +20,23 @@
         <div style="text-align: center; margin-top: 40px;">
             <p style="font-size: 1.2rem; margin-bottom: 30px;">
                  Welcome to the game homepage! <br>
-                Please <a class="button-link" href="/auth/login">Login</a> or <a class="button-link" href="/auth/register">Register</a>
-                to get started!
+                Jump in as a guest right away, or register to save stats and unlock member perks.
+            </p>
+
+            <% if (warning) { %>
+                <p style="color: #c0392b; font-weight: bold;"><%= warning %></p>
+            <% } %>
+
+            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 24px;">
+                <form action="/auth/guest" method="post">
+                    <button type="submit" class="button-link">Play as Guest</button>
+                </form>
+                <a class="button-link" href="/auth/login">Login</a>
+                <a class="button-link" href="/auth/register">Register</a>
+            </div>
+
+            <p style="font-size: 1rem; margin-bottom: 30px;">
+                Guests can play live games, but member benefits like saved stats stay tied to registered accounts.
             </p>
 
             <img src="/images/Mascot.png" alt="Mascot" style="max-width: 200px;" />

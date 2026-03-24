@@ -1,20 +1,11 @@
 import express from "express";
 import { Request, Response } from "express";
-import db from "../db/connection";
 import { getAvailableGames } from "../db/games";
 
 const router = express.Router();
 
 router.get("/", async (request: Request, response: Response) => {
   try {
-    // @ts-ignore
-    const user_id = request.session.user_id;
-
-    // Fetch the username from the database
-    const { username } = await db.one(
-      "SELECT username FROM users WHERE user_id = $1",
-      [user_id],
-    );
     const games = await getAvailableGames();
 
     // Get warning from query string if present
@@ -23,11 +14,13 @@ router.get("/", async (request: Request, response: Response) => {
     response.render("lobby", {
       // @ts-ignore
       username: request.session?.username,
+      // @ts-ignore
+      isGuest: Boolean(request.session?.isGuest),
       games,
       warning,
     });
   } catch (error) {
-    console.error("Error fetching username:", error);
+    console.error("Error fetching lobby:", error);
     response.status(500).send("Internal Server Error");
   }
 });

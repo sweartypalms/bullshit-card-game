@@ -9,6 +9,10 @@ const authMiddleware = (
   if (request.session.user_id !== undefined) {
     // @ts-ignore
     response.locals.user_id = request.session.user_id; // add stored userId to 'locals' which is accessible by all views
+    // @ts-ignore
+    response.locals.username = request.session.username;
+    // @ts-ignore
+    response.locals.isGuest = Boolean(request.session.isGuest);
     next();
   } else {
     response.redirect("/auth/login");
