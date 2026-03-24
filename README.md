@@ -1,6 +1,8 @@
 # 🐊 Gator Tots Present: Bullsh\*t 🎴  
 **A Web-Based Multiplayer Bluffing Card Game**
 
+**Demo**: https://bullshit-card-game.onrender.com/
+
 Welcome to **Bullsh\*t**, a fast-paced, deception-driven card game built as a term project for **CSC 667/867** at *San Francisco State University*. In this game, players must lie—or catch others lying—to be the first to ditch all their cards!
 
 ---
