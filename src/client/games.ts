@@ -45,6 +45,35 @@ function openProfilePopup(username: string) {
   );
 }
 
+function formatChatTimestamp(timestamp: string | Date) {
+  const messageDate = new Date(timestamp);
+  if (Number.isNaN(messageDate.getTime())) {
+    return "";
+  }
+
+  const now = new Date();
+  const isCurrentDate =
+    messageDate.getFullYear() === now.getFullYear() &&
+    messageDate.getMonth() === now.getMonth() &&
+    messageDate.getDate() === now.getDate();
+
+  const timeText = messageDate.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  if (isCurrentDate) {
+    return `[${timeText}] `;
+  }
+
+  const dateText = messageDate.toLocaleDateString([], {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  });
+  return `[${dateText} ${timeText}] `;
+}
+
 function appendChatMessage(username: string, text: string, timestamp: string | Date) {
   const chatMessages = document.getElementById("chat-messages");
   if (!chatMessages) {
@@ -54,7 +83,7 @@ function appendChatMessage(username: string, text: string, timestamp: string | D
   const li = document.createElement("li");
   li.className = "chat-message-item";
 
-  const timeLabel = `[${new Date(timestamp).toLocaleTimeString()}] `;
+  const timeLabel = formatChatTimestamp(timestamp);
   li.append(timeLabel);
 
   if (username && username !== "Server" && username !== "Unknown") {

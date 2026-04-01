@@ -8,6 +8,7 @@ const router = express.Router();
 router.post("/:roomId", async (request: Request, response: Response) => {
   const { roomId } = request.params;
   const { message } = request.body;
+  const numericRoomId = Number(roomId);
 
   // @ts-ignore
   const username = request.session.username;
@@ -26,9 +27,16 @@ router.post("/:roomId", async (request: Request, response: Response) => {
   }
 
   try {
+    if (numericRoomId === 0) {
+      await db.none(
+        "DELETE FROM message WHERE game_room_game_room_id = $1 AND timestamp < NOW() - INTERVAL '3 days'",
+        [numericRoomId],
+      );
+    }
+
     await db.none(
       "INSERT INTO message (game_room_game_room_id, username, message_content, user_user_id) VALUES ($1, $2, $3, $4)",
-      [roomId, username, message, user_id],
+      [numericRoomId, username, message, user_id],
     );
     await Game.touchUser(user_id);
 
@@ -49,11 +57,14 @@ router.get(
   "/:roomId/messages",
   async (request: Request, response: Response) => {
     const { roomId } = request.params;
+    const numericRoomId = Number(roomId);
 
     try {
       const messages = await db.any(
-        "SELECT username AS username, message_content, timestamp FROM message WHERE game_room_game_room_id = $1 ORDER BY timestamp ASC",
-        [roomId],
+        numericRoomId === 0
+          ? "SELECT username AS username, message_content, timestamp FROM message WHERE game_room_game_room_id = $1 AND timestamp >= NOW() - INTERVAL '3 days' ORDER BY timestamp ASC"
+          : "SELECT username AS username, message_content, timestamp FROM message WHERE game_room_game_room_id = $1 ORDER BY timestamp ASC",
+        [numericRoomId],
       );
 
       response.json(messages);
